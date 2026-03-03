@@ -10,6 +10,7 @@ import { RubricsModule } from './rubrics/rubrics.module';
 import { AiAnalysesModule } from './ai-analyses/ai-analyses.module';
 import { ForumPostsModule } from './forum-posts/forum-posts.module';
 import { EmailNotificationsModule } from './email-notifications/email-notifications.module';
+import { ProfileModule } from './profile/profile.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { AuthModule } from './auth/auth.module';
     RubricsModule,
     AiAnalysesModule,
     ForumPostsModule,
+    ProfileModule,
     EmailNotificationsModule,
     AuthModule,
   ],
