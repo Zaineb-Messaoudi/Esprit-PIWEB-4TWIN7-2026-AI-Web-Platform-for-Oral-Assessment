@@ -3,16 +3,37 @@ import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type UserDocument = User & Document & { _id: Types.ObjectId };
 
-// Enum for user roles
 export enum UserRole {
   STUDENT = 'student',
   INSTRUCTOR = 'instructor',
   ADMIN = 'admin',
 }
 
+export enum ActivityEventType {
+  LOGIN = 'login',
+  LOGIN_FACE = 'login_face',
+  LOGIN_OAUTH = 'login_oauth',
+  LOGIN_FAILED = 'login_failed',
+  LOGOUT = 'logout',
+  PASSWORD_CHANGED = 'password_changed',
+  PASSWORD_RESET = 'password_reset', // via forgot-password flow
+  EMAIL_VERIFIED = 'email_verified',
+  PROFILE_UPDATED = 'profile_updated',
+  FACE_ENROLLED = 'face_enrolled',
+  ACCOUNT_CREATED = 'account_created',
+}
+
+export interface ActivityLogEntry {
+  event: ActivityEventType;
+  timestamp: Date;
+  ip?: string;
+  device?: string; // e.g. "Chrome on Windows"
+  location?: string; // e.g. "Tunis, TN" — from IP geo (optional)
+  metadata?: Record<string, string>; // any extra context
+}
+
 @Schema({ timestamps: true })
 export class User {
-  // Unique username, trimmed and lowercase
   @Prop({
     required: true,
     unique: true,
@@ -21,7 +42,6 @@ export class User {
   })
   username!: string;
 
-  // Unique email, trimmed and lowercase
   @Prop({
     required: true,
     unique: true,
@@ -30,22 +50,18 @@ export class User {
   })
   email!: string;
 
-  // Password, hidden by default in queries
   @Prop({
     required: true,
     select: false,
   })
   password!: string;
 
-  // User first name
   @Prop({ required: true, trim: true })
   firstName!: string;
 
-  // User last name
   @Prop({ required: true, trim: true })
   lastName!: string;
 
-  // Role of the user with enum validation
   @Prop({
     required: true,
     enum: UserRole,
@@ -53,33 +69,28 @@ export class User {
   })
   role!: UserRole;
 
-  // Optional profile image URL
   @Prop()
   profileImage?: string;
 
-  // Optional CIN with sparse index
   @Prop({
     sparse: true,
     index: true,
   })
   cin?: string;
 
-  // Phone number (required)
   @Prop({ required: true })
   phone!: string;
 
-  // Date of birth (required)
   @Prop({ required: true })
   dateOfBirth!: Date;
 
-  // Email notification preferences with default values
   @Prop({
     type: {
       onUpload: { type: Boolean, default: true },
       onGrade: { type: Boolean, default: true },
       onFeedback: { type: Boolean, default: true },
     },
-    default: () => ({}), // Prevents shared object reference
+    default: () => ({}),
   })
   emailPreferences!: {
     onUpload: boolean;
@@ -87,17 +98,38 @@ export class User {
     onFeedback: boolean;
   };
 
-  // Optional face recognition data (flexible storage)
   @Prop({
     type: MongooseSchema.Types.Mixed,
   })
   faceIdData?: Record<string, any>;
 
-  // Active status, default true
   @Prop({
-    default: true,
+    type: [
+      {
+        event: { type: String, required: true },
+        timestamp: { type: Date, required: true },
+        ip: { type: String },
+        device: { type: String },
+        location: { type: String },
+        metadata: { type: MongooseSchema.Types.Mixed },
+      },
+    ],
+    default: [],
+    select: false,
   })
+  activityLog!: ActivityLogEntry[];
+
+  @Prop({ default: true })
   isActive!: boolean;
+
+  @Prop({ default: false })
+  isEmailVerified!: boolean;
+
+  @Prop({ type: [String], default: [] })
+  oauthProviders?: string[];
+
+  @Prop({ default: false })
+  profileIncomplete!: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

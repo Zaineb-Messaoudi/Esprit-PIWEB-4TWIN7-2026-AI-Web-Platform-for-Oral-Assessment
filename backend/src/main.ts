@@ -1,17 +1,24 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import * as express from 'express';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  try {
+    const app = await NestFactory.create(AppModule);
 
-  app.enableCors({
-    origin: 'http://localhost:5173',
-    credentials: true,
-  });
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-  await app.listen(3000);
+    app.enableCors({ origin: 'http://localhost:5173', credentials: true });
+
+    await app.listen(3000);
+    console.log('✅ NestJS server is running on http://localhost:3000');
+  } catch (err) {
+    console.error('❌ Error during bootstrap:', err);
+    process.exit(1);
+  }
 }
-bootstrap().catch((error: unknown) => {
-  console.error('Failed to start Nest application', error);
-  process.exit(1);
-});
+bootstrap();

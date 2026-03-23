@@ -1,42 +1,129 @@
 import {
   Controller,
   Get,
-  Post,
+  Put,
   Body,
-  Patch,
   Param,
-  Delete,
+  UseGuards,
+  Request,
+  ForbiddenException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  UpdateProfileDto,
+  UpdateStudentProfileDto,
+  UpdateInstructorProfileDto,
+} from './dto/update-user.dto';
+import { ChangePasswordDto } from '../auth/dto/change-password.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserDocument } from './entities/user.entity';
+import { AuditService } from '../audit/audit.service';
 
-@Controller('users')
+type AuthenticatedRequest = ExpressRequest & { user: UserDocument };
+
+@UseGuards(JwtAuthGuard)
+@Controller('api')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly auditService: AuditService,
+  ) {}
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  // ─── Only let a user touch their own data ──────────────────────────────────
+
+  private assertSelf(req: AuthenticatedRequest, userId: string): void {
+    if (req.user._id.toString() !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
   }
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
+  // ─── Shared profile ─────────────────────────────────────────────────────────
+
+  @Get('profile/:userId')
+  getProfile(
+    @Param('userId') userId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.usersService.getProfile(userId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @Put('profile/:userId')
+  updateProfile(
+    @Param('userId') userId: string,
+    @Body() dto: UpdateProfileDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.usersService.updateProfile(userId, dto, req);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  // ─── Student profile ─────────────────────────────────────────────────────────
+
+  @Get('profile/:userId/student')
+  getStudentProfile(
+    @Param('userId') userId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.usersService.getStudentProfile(userId);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @Put('profile/:userId/student')
+  updateStudentProfile(
+    @Param('userId') userId: string,
+    @Body() dto: UpdateStudentProfileDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.usersService.updateStudentProfile(userId, dto, req);
+  }
+
+  // ─── Instructor profile ──────────────────────────────────────────────────────
+
+  @Get('profile/:userId/instructor')
+  getInstructorProfile(
+    @Param('userId') userId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.usersService.getInstructorProfile(userId);
+  }
+
+  @Put('profile/:userId/instructor')
+  updateInstructorProfile(
+    @Param('userId') userId: string,
+    @Body() dto: UpdateInstructorProfileDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.usersService.updateInstructorProfile(userId, dto, req);
+  }
+
+  // ─── Password ────────────────────────────────────────────────────────────────
+
+  @Put('change_password/:userId')
+  @HttpCode(HttpStatus.OK)
+  changePassword(
+    @Param('userId') userId: string,
+    @Body() dto: ChangePasswordDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.usersService.changePassword(userId, dto, req);
+  }
+
+  // ─── Activity log ────────────────────────────────────────────────────────────
+
+  @Get('activity/:userId')
+  getActivity(
+    @Param('userId') userId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.assertSelf(req, userId);
+    return this.auditService.getLog(userId);
   }
 }

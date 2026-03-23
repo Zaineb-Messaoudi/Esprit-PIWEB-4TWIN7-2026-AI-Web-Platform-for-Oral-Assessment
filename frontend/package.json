@@ -30,6 +30,7 @@
     "bootstrap": "^5.3.8",
     "date-fns": "^4.1.0",
     "dompurify": "^3.3.1",
+    "face-api.js": "^0.22.2",
     "flowbite-react": "^0.10.1",
     "framer-motion": "^12.34.3",
     "html-react-parser": "^5.2.17",

@@ -29,11 +29,17 @@ import AllCoursesStudent from './Pages/AllCoursesStudent.jsx';
 import AllCoursesTeacher from './Pages/AllCoursesTeacher.jsx';
 import AdminManageStudents from './Pages/AdminManageStudents.jsx';
 import {ThemeProvider} from "@/context/ThemeContect.jsx";
+import OAuthCallback from './Pages/OAuthCallback.jsx'; 
+import { AccessibilityProvider } from "@/context/AccessibilityContext";
+import { AccessibilityWidget } from "@/Components/AccessibilityWidget";
+
 
 function App() {
-    const [showWelcome, setShowWelcome] = useState(true);
+    const isOAuthCallback = window.location.pathname === '/auth/oauth-callback';
+  const [showWelcome, setShowWelcome] = useState(!isOAuthCallback);
     return (
         <ThemeProvider>
+            <AccessibilityProvider>
             <BrowserRouter>
     <AnimatePresence mode="wait">
         {showWelcome ? (
@@ -43,6 +49,8 @@ function App() {
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/auth/oauth-callback" element={<AuthPage />} />
+
 
                 {/* ─── Student Dashboard ─────────────────────────────────────── */}
                 <Route path="/StudydDashboard" element={<StudyDashboard />}>
@@ -157,7 +165,10 @@ function App() {
             </Routes>
         )}
     </AnimatePresence>
+    <AccessibilityWidget position="bottom-right" />
+
 </BrowserRouter>
+        </AccessibilityProvider>
         </ThemeProvider>  );
 }
 

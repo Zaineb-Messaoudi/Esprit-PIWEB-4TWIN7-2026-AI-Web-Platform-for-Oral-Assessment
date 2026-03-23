@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config'; // ✅ add this
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -12,9 +13,15 @@ import { ForumPostsModule } from './forum-posts/forum-posts.module';
 import { EmailNotificationsModule } from './email-notifications/email-notifications.module';
 import { ProfileModule } from './profile/profile.module';
 import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      // ✅ add this block
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
     MongooseModule.forRoot('mongodb://localhost:27017/platformdb'),
     UsersModule,
     ClassesModule,
@@ -26,6 +33,7 @@ import { AuthModule } from './auth/auth.module';
     ProfileModule,
     EmailNotificationsModule,
     AuthModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
