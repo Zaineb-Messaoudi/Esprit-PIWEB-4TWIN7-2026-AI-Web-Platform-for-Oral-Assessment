@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ClassesService } from './classes.service';
 import { ClassesController } from './classes.controller';
 import { Class, ClassSchema } from './entities/class.entity';
-import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
@@ -10,5 +10,6 @@ import { MongooseModule } from '@nestjs/mongoose';
   ],
   controllers: [ClassesController],
   providers: [ClassesService],
+  exports: [ClassesService],
 })
 export class ClassesModule {}
