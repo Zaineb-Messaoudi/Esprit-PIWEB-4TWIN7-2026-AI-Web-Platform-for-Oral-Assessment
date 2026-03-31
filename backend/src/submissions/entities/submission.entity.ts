@@ -1,8 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type SubmissionDocument = Submission &
-  Document & { _id: Types.ObjectId };
+export type SubmissionDocument = Submission & Document & { _id: Types.ObjectId };
 
 @Schema({ timestamps: true })
 export class Submission {
@@ -12,36 +11,23 @@ export class Submission {
   @Prop({ type: Types.ObjectId, ref: 'Class', required: true, index: true })
   classId!: Types.ObjectId;
 
-  @Prop({ required: true })
-  title!: string;
-
-  @Prop()
-  description!: string;
-
-  @Prop({
-    required: true,
-    enum: ['instructor_recorded', 'student_uploaded'],
-    index: true,
-  })
-  submissionType!: string;
+  @Prop({ type: Types.ObjectId, ref: 'Assignment', required: true, index: true })
+  assignmentId!: Types.ObjectId;
 
   @Prop({ required: true, enum: ['audio', 'video'] })
   fileType!: string;
 
   @Prop()
-  audioFileUrl?: string;
+  fileUrl?: string;
 
   @Prop()
-  videoFileUrl?: string;
+  fileDuration?: number;
 
   @Prop()
-  fileDuration?: number = 0;
+  fileSize?: number;
 
-  @Prop()
-  fileSize?: number = 0;
-
-  @Prop({ type: Types.ObjectId, ref: 'User' })
-  recordedBy?: Types.ObjectId;
+  @Prop({ default: true, index: true })
+  isDraft!: boolean;
 
   @Prop({
     required: true,
@@ -54,8 +40,8 @@ export class Submission {
   @Prop({ type: Object })
   grade?: number | string;
 
-  @Prop({ default: Date.now })
-  submissionDate: Date = new Date();
+  @Prop()
+  submittedAt?: Date;
 }
 
 export const SubmissionSchema = SchemaFactory.createForClass(Submission);

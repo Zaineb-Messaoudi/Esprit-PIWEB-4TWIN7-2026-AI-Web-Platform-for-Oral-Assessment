@@ -19,7 +19,7 @@ import {
   HelpCircle,
   TrendingUp,
   Award, PieChart, Mail, Star, Plus, Edit, Eye,
-  Sun, Moon
+  Sun, Moon, Target
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import TeacherSettings from '../Components/TeacherSettings';
@@ -201,6 +201,7 @@ const TeacherDashboard = () => {
     { id: 'all-courses', label: 'All Courses', icon: GraduationCap, description: 'Explore all courses on the platform', path: '/teacherdashboard/all-courses' },
     { id: 'courses', label: 'My Courses', icon: BookOpen, description: 'Manage your courses and curriculum', path: '/teacherdashboard/courses' },
     { id: 'quizzes', label: 'Quizzes', icon: ClipboardList, description: 'Create and manage assignments', path: '/teacherdashboard/quizzes' },
+    { id: 'assignments', label: 'Assignments', icon: Target, description: 'Manage audio/video assignments', path: '/teacherdashboard/assignments' },
     { id: 'grading', label: 'Grading Center', icon: FileText, description: 'Review and grade submissions', path: '/teacherdashboard/grading' },
     { id: 'attendance', label: 'Attendance', icon: UserCheck, description: 'Track student attendance', path: '/teacherdashboard/attendance' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Student performance analytics', path: '/teacherdashboard/analytics' },

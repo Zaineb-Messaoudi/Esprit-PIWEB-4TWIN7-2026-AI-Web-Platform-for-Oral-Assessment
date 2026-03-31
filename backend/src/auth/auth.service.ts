@@ -100,7 +100,7 @@ export class AuthService {
       { email, otp, purpose: 'email_verification' },
       {
         secret: process.env.JWT_OTP_SECRET || 'otp-secret-key',
-        expiresIn: '10m',
+        expiresIn: '24h',
       },
     );
   }
@@ -111,7 +111,7 @@ export class AuthService {
       { email, otp, purpose: 'password_reset' },
       {
         secret: process.env.JWT_OTP_SECRET || 'otp-secret-key',
-        expiresIn: '10m',
+        expiresIn: '24h',
       },
     );
   }
@@ -403,7 +403,7 @@ export class AuthService {
         { sub: user._id.toString(), username: user.username, role: user.role },
         {
           secret: process.env.JWT_SECRET || 'your-secret-key',
-          expiresIn: '15m',
+          expiresIn: '24h',
         },
       );
 
@@ -543,7 +543,7 @@ export class AuthService {
 
     const access_token = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET || 'your-secret-key',
-      expiresIn: '15m',
+      expiresIn: '24h',
     });
 
     const refresh_token = this.jwtService.sign(payload, {

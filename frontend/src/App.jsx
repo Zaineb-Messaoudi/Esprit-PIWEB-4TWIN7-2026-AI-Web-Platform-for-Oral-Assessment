@@ -32,6 +32,8 @@ import {ThemeProvider} from "@/context/ThemeContect.jsx";
 import OAuthCallback from './Pages/OAuthCallback.jsx'; 
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AccessibilityWidget } from "@/Components/AccessibilityWidget";
+import Assignments from './Pages/student/Assignments';
+import AssignmentsTeacher from './Pages/teacher/AssignmentsTeacher';
 
 
 function App() {
@@ -77,7 +79,7 @@ function App() {
 
 
                     <Route path="settings" element={<StudentSettings />} />
-                    <Route path="assignments" element={<PlaceholderPage title="Assignments" description="Track and submit assignments" />} />
+                    <Route path="assignments" element={<Assignments />} />
                     <Route path="schedule" element={<PlaceholderPage title="Schedule" description="Daily and weekly learning schedule" />} />
                     <Route path="progress" element={<PlaceholderPage title="Progress & Analytics" description="Your learning analytics and goals" />} />
                     <Route path="achievements" element={<PlaceholderPage title="Achievements" description="Your badges and certificates" />} />
@@ -102,6 +104,7 @@ function App() {
                     <Route path="quizzes" element={<ExamsQuizzes />} />
                     <Route path="quizzes/create" element={<CreateQuiz />} />
                     <Route path="quizzes/edit/:id" element={<EditQuiz />} />
+                    <Route path="assignments" element={<AssignmentsTeacher />} />
                     <Route path="settings" element={<TeacherSettings />} />
 
                     {/* My Courses + CourseDetails + ContentDetail */}
