@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import {
   UpdateStudentDto,
@@ -25,8 +16,18 @@ import { UserRole } from '../users/entities/user.entity';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  // ─── Students ──────────────────────────────────────────────────────────────
+  // ─── Advanced Search for Teachers ──────────────────────────────────────────
+  @Get('teachers/search')
+  async searchTeachers(
+    @Query('active') active?: string,
+    @Query('email') email?: string,
+    @Query('role') role?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.adminService.searchTeachers({ active, email, role, date });
+  }
 
+  // ─── Students ──────────────────────────────────────────────────────────────
   @Get('students')
   getAllStudents() {
     return this.adminService.getAllStudents();
@@ -57,8 +58,12 @@ export class AdminController {
     return this.adminService.hardDeleteStudent(id);
   }
 
-  // ─── Teachers ──────────────────────────────────────────────────────────────
+  @Post('students/bulk')
+  bulkStudentAction(@Body() body: { userIds: string[]; action: string }) {
+    return this.adminService.bulkStudentAction(body.userIds, body.action);
+  }
 
+  // ─── Teachers ──────────────────────────────────────────────────────────────
   @Get('teachers')
   getAllTeachers() {
     return this.adminService.getAllTeachers();

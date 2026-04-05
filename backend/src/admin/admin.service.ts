@@ -374,4 +374,55 @@ export class AdminService {
     await this.userModel.deleteOne({ _id: user._id });
     return { message: 'Teacher permanently deleted' };
   }
+
+
+  async bulkStudentAction(userIds: string[], action: string) {
+  switch (action) {
+    case 'activate':
+      await this.userModel.updateMany(
+        { _id: { $in: userIds } },
+        { isActive: true }
+      );
+      break;
+
+    case 'deactivate':
+      await this.userModel.updateMany(
+        { _id: { $in: userIds } },
+        { isActive: false }
+      );
+      break;
+
+    case 'delete':
+      await this.studentProfileModel.deleteMany({
+        userId: { $in: userIds },
+      });
+      await this.userModel.deleteMany({
+        _id: { $in: userIds },
+      });
+      break;
+
+    default:
+      throw new Error('Invalid action');
+  }
+
+  return { message: 'Bulk action completed' };
+}
+
+
+private teachers = [
+    { id: 1, email: 'alice@mail.com', role: 'Teacher', is_active: true, created_at: '2026-04-01' },
+    { id: 2, email: 'bob@mail.com', role: 'Admin', is_active: false, created_at: '2026-03-25' },
+    // ... autres enseignants
+  ];
+
+  async searchTeachers(filters: { active?: string; email?: string; role?: string; date?: string }) {
+    return this.teachers.filter(t => {
+      if (filters.active && String(t.is_active) !== filters.active) return false;
+      if (filters.email && !t.email.toLowerCase().includes(filters.email.toLowerCase())) return false;
+      if (filters.role && !t.role.toLowerCase().includes(filters.role.toLowerCase())) return false;
+            if (filters.date && !t.created_at.startsWith(filters.date)) return false;
+      return true;
+    });
+  }
+
 }
