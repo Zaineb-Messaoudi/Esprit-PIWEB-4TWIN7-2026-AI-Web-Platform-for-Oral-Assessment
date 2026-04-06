@@ -17,6 +17,9 @@ async function bootstrap() {
 
     app.enableCors({ origin: 'http://localhost:5173', credentials: true });
 
+    app.useBodyParser('json', { limit: '50mb' });
+app.useBodyParser('urlencoded', { limit: '50mb', extended: true });
+
     await app.listen(3000);
     console.log('✅ NestJS server is running on http://localhost:3000');
   } catch (err) {

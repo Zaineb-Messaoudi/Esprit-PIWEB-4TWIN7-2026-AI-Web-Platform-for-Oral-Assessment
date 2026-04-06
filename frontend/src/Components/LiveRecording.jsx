@@ -6,54 +6,87 @@ const LiveRecording = ({ classId, studentId, isInstructor, duration = 10000 }) =
   const [recordingChunks, setRecordingChunks] = useState([]);
   const [preview, setPreview] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
+  const videoRef = useRef(null); // 🎥 live preview
 
   useEffect(() => {
     if (isInstructor) {
       fetch(`/api/classes/${classId}/students`)
         .then(res => res.json())
         .then(data => setStudents(data || []))
-        .catch(err => console.error("Erreur fetch students:", err));
+        .catch(err => console.error(err));
     }
   }, [classId, isInstructor]);
 
-  // Démarrer l’enregistrement avec arrêt automatique
+  // ▶️ START
   const startRecording = async () => {
-    if (isRecording) return; // éviter double clic
+    if (isRecording) return;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true
+      });
+
       streamRef.current = stream;
-      const mediaRecorder = new MediaRecorder(stream);
+
+      // 🎥 afficher caméra en direct
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      // 🎯 format correct audio + vidéo
+      const options = { mimeType: 'video/webm; codecs=vp8,opus' };
+      const mediaRecorder = MediaRecorder.isTypeSupported(options.mimeType)
+        ? new MediaRecorder(stream, options)
+        : new MediaRecorder(stream);
+
       mediaRecorderRef.current = mediaRecorder;
       let chunks = [];
 
-      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
 
       mediaRecorder.onstop = () => {
-        setRecordingChunks(chunks);
         const blob = new Blob(chunks, { type: 'video/webm' });
+        setRecordingChunks(chunks);
         setPreview(URL.createObjectURL(blob));
         setIsRecording(false);
+
+        // 🧹 arrêter caméra + micro
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       setIsRecording(true);
 
-      // Arrêt automatique après `duration` ms
+      // ⏱️ arrêt automatique
       setTimeout(() => {
-        if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
       }, duration);
 
     } catch (err) {
-      alert("Impossible d'accéder au micro ou à la caméra !");
+      alert("Erreur accès caméra/micro !");
       console.error(err);
     }
   };
 
+  // ⏹️ STOP manuel
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  // 📤 UPLOAD
   const uploadRecording = async (isDraft = false) => {
     if (!recordingChunks.length) return alert('Rien à envoyer !');
+
     const blob = new Blob(recordingChunks, { type: 'video/webm' });
     const formData = new FormData();
     formData.append('file', blob);
@@ -65,6 +98,7 @@ const LiveRecording = ({ classId, studentId, isInstructor, duration = 10000 }) =
         method: 'POST',
         body: formData,
       });
+
       alert(isDraft ? 'Brouillon enregistré !' : 'Enregistrement envoyé !');
     } catch (err) {
       console.error(err);
@@ -74,41 +108,64 @@ const LiveRecording = ({ classId, studentId, isInstructor, duration = 10000 }) =
 
   return (
     <div className="p-4">
+
+      {/* 👨‍🎓 SELECT STUDENT */}
       {isInstructor && (
         <div className="mb-4">
-          <label className="mr-2 font-semibold">Sélectionner un étudiant :</label>
+          <label className="mr-2 font-semibold">Étudiant :</label>
           <select
             onChange={e => setSelectedStudent(e.target.value)}
             value={selectedStudent}
             className="border p-2 rounded"
           >
-            <option value="">-- Choisir un étudiant --</option>
-            {students.length > 0 ? (
-              students.map(s => (
-                <option key={s._id || s.id} value={s._id || s.id}>
-                  {s.name || "Nom inconnu"}
-                </option>
-              ))
-            ) : (
-              <option disabled>Aucun étudiant disponible</option>
-            )}
+            <option value="">-- Choisir --</option>
+            {students.map(s => (
+              <option key={s.id || s._id} value={s.id || s._id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
       )}
 
-      <div className="mt-4">
+      {/* 🎥 CAMERA LIVE */}
+      <div className="mb-4">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          className="w-96 border rounded"
+        />
+      </div>
+
+      {/* 🎮 BUTTONS */}
+      <div className="flex gap-2">
         <button
           onClick={startRecording}
-          className={`px-4 py-2 rounded ${isRecording ? 'bg-gray-400 text-white' : 'bg-green-500 text-white'}`}
           disabled={isRecording}
+          className="bg-green-500 text-white px-4 py-2 rounded"
         >
-          {isRecording ? 'Enregistrement en cours...' : 'Démarrer l\'enregistrement'}
+          Start
+        </button>
+
+        <button
+          onClick={stopRecording}
+          className="bg-red-500 text-white px-4 py-2 rounded"
+        >
+          Stop
         </button>
       </div>
 
+      {/* 🎬 PREVIEW */}
       {preview && (
         <div className="mt-4">
-          <video src={preview} controls width="400" className="border rounded" />
+          <video
+            src={preview}
+            controls
+            autoPlay
+            className="w-96 border rounded"
+          />
+
           <div className="mt-2 flex gap-2">
             <button
               onClick={() => uploadRecording(false)}
@@ -116,15 +173,17 @@ const LiveRecording = ({ classId, studentId, isInstructor, duration = 10000 }) =
             >
               Envoyer
             </button>
+
             <button
               onClick={() => uploadRecording(true)}
               className="bg-gray-500 text-white px-4 py-2 rounded"
             >
-              Garder en brouillon
+              Brouillon
             </button>
           </div>
         </div>
       )}
+
     </div>
   );
 };
