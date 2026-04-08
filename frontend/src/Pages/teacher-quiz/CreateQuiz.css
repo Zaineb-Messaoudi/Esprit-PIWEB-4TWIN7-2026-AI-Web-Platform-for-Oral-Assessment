@@ -1,0 +1,36 @@
+/* CreateQuiz.css - Styling for the create quiz page */
+.create-quiz-button {
+  cursor: pointer;
+}
+input[type="text"] {
+  border: none;
+  outline: none;
+}
+input[type="radio"] {
+  accent-color: #f87171;
+}
+button:hover {
+  transform: scale(1.02);
+  transition: transform 0.3s;
+}
+
+/* ── Light mode overrides ───────────────────────────────────────── */
+.light input[type="text"],
+.light input[type="number"],
+.light textarea,
+.light select {
+  background-color: #f9fafb;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+.light input[type="text"]:focus,
+.light input[type="number"]:focus,
+.light textarea:focus {
+  border-color: #f87171;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.2);
+}
+
+.light input[type="radio"] {
+  accent-color: #dc2626;
+}
