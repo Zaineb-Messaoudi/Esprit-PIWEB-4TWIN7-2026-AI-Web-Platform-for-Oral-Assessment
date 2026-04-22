@@ -67,7 +67,7 @@ export default function FaceLoginModal({ onSuccess, onClose }) {
 
     // Send base64 image to backend — descriptor extraction happens server-side
     try {
-      const res  = await fetch('http://127.0.0.1:3000/api/face-login', {
+      const res  = await fetch('http://localhost:3000/api/face-login', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ image: base64 }),

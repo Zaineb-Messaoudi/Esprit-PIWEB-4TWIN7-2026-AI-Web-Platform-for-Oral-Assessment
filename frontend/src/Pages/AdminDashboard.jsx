@@ -31,7 +31,7 @@ import { useTheme } from "../context/ThemeContect.jsx";
 import AdminManageTeachers from './AdminManageTeachers';
 import CourseList from '../Components/CourseList';
 import AdminManageStudents from './AdminManageStudents';
-import AdminClassManagement from '../Components/AdminClassManagement';
+import AdminClassManagement from '../Components/Adminclassmanagement';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const PlaceholderPage = ({ title, description }) => {
@@ -344,34 +344,27 @@ const AdminDashboard = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        setLoading(true);
-        const coursesResponse = await fetch('http://localhost:3000/courses/', {
-          credentials: 'include',
-        });
-        if (!coursesResponse.ok) {
-          throw new Error(`HTTP error! Status: ${coursesResponse.status}`);
-        }
-        const coursesData = await coursesResponse.json();
-        const formattedCourses = coursesData.map(course => ({
-          id: course.id,
-          title: course.title,
-          description: course.description,
-          teacher: course.teacher || { username: course.teacher_name || 'Unknown Teacher' },
-          isFollowed: false,
-          cover_photo: course.cover_photo || null,
-        }));
-        setAllCourses(formattedCourses);
-      } catch (err) {
-        setError(`Error fetching courses: ${err.message}.`);
-      } finally {
-        setLoading(false);
-      }
-    };
+  if (currentPage !== 'course_management') return;
 
-    fetchCourses();
-  }, []);
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const coursesResponse = await fetch('http://localhost:3000/classes', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!coursesResponse.ok) throw new Error(`HTTP error! Status: ${coursesResponse.status}`);
+      const coursesData = await coursesResponse.json();
+      setAllCourses(coursesData);
+    } catch (err) {
+      setError(`Error fetching courses: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchCourses();
+}, [currentPage]);
 
   const handleCourseAction = async (action, courseId) => {
     try {

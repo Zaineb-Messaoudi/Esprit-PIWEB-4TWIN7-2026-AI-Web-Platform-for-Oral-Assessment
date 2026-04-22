@@ -8,7 +8,7 @@ import {
 import { UserRole } from '../../users/entities/user.entity';
 
 export class CompleteProfileDto {
-  @IsEnum([UserRole.STUDENT, UserRole.INSTRUCTOR])
+  @IsEnum(UserRole)
   user_type!: UserRole;
 
   @IsString()

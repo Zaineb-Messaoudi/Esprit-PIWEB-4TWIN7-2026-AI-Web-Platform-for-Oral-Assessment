@@ -56,7 +56,7 @@ const CourseList = ({ role, courses, onAction, currentTeacher = '' }) => {
     try {
       const token = localStorage.getItem('token') || '';
       const response = await axios.get(
-          `http://127.0.0.1:3000//courses/${courseId}/chapters/`,
+          `http://localhost:3000//courses/${courseId}/chapters/`,
           { headers: { Authorization: `Bearer ${token}` } }
       );
       setChapters((prev) => ({
@@ -106,7 +106,7 @@ const CourseList = ({ role, courses, onAction, currentTeacher = '' }) => {
   const getImageSrc = (coverPhoto) => {
     if (!coverPhoto) return null;
     if (coverPhoto.startsWith('http://') || coverPhoto.startsWith('https://')) return coverPhoto;
-    return `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000'}${coverPhoto.startsWith('/') ? '' : '/'}${coverPhoto}`;
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${coverPhoto.startsWith('/') ? '' : '/'}${coverPhoto}`;
   };
 
   return (

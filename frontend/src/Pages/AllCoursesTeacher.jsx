@@ -88,7 +88,7 @@ const AllCoursesTeacher = () => {
               <p className="text-red-400 text-center">{error}</p>
           ) : (
               <CourseList
-                  role="teacher"
+                  role="instructor"
                   courses={allCourses}
                   onAction={handleCourseAction}
                   currentTeacher={localStorage.getItem('username') || 'teacher1'}

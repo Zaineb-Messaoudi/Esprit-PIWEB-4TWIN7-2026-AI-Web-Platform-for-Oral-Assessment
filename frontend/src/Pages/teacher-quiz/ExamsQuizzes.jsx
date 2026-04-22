@@ -18,7 +18,7 @@ const ExamsQuizzes = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:3000/quizzes/', {
+      const response = await fetch('http://localhost:3000/quizzes/', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -52,7 +52,7 @@ const ExamsQuizzes = () => {
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:3000/quizzes/${id}/`, {
+      const response = await fetch(`http://localhost:3000/quizzes/${id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

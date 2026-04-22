@@ -22,7 +22,8 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
     });
   }
 
-  async validate(
+  // facebook.strategy.ts — CORRIGÉ
+  validate(
     _accessToken: string,
     _refreshToken: string,
     profile: Profile,
@@ -39,16 +40,14 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
         );
       }
 
-      const result = await this.authService.findOrCreateOAuthUser({
+      // ✅ Même pattern que Google — laisser le controller gérer la DB
+      done(null, {
         email,
         firstName,
         lastName,
-        profileImage: profile.photos?.[0]?.value,
-        provider: 'facebook',
-        socialId: profile.id, // ← added
+        picture: profile.photos?.[0]?.value,
+        facebookId: profile.id, // ← le controller attend facebookId
       });
-
-      done(null, result);
     } catch (error) {
       done(
         error instanceof Error

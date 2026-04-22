@@ -4,10 +4,7 @@ import {
   Layers, Mail, RefreshCw,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContect.jsx';
-
-const BASE_URL = 'http://localhost:3000';
-
-const userId = () => localStorage.getItem('userId') || '';
+import api from '../api/axios';
 
 // ─── Stat Pill ────────────────────────────────────────────────────────────────
 
@@ -32,14 +29,12 @@ const ClassmateCard = memo(({ student, index, isDark }) => (
   <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors ${
     isDark ? 'bg-white/5 border-white/10 hover:bg-white/8' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
   }`}>
-    {/* Avatar */}
     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
       <span className="text-white text-xs font-bold">
         {(student.firstName?.[0] || '?').toUpperCase()}
         {(student.lastName?.[0]  || '').toUpperCase()}
       </span>
     </div>
-
     <div className="min-w-0 flex-1">
       <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
         {student.firstName} {student.lastName}
@@ -49,7 +44,6 @@ const ClassmateCard = memo(({ student, index, isDark }) => (
         {student.email}
       </p>
     </div>
-
     <span className={`text-xs font-semibold flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
       #{index + 1}
     </span>
@@ -68,25 +62,35 @@ const StudentClasses = () => {
   const [error,     setError]     = useState('');
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/classes/student/${userId()}`);
-        if (!res.ok) throw new Error('No class found for your account');
-        const data = await res.json();
-        setClassData(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  (async () => {
+    try {
+      const { data } = await api.get('/classes/student/mine');
+      console.log('RAW data:', data);
+      const cls = Array.isArray(data) ? data[0] : data;
+      console.log('cls:', cls);
 
+
+      if (!cls) {
+        setError('No class found for your account');
+        return;
+      }
+
+      setClassData(cls);  // ← was setClassData(data) ❌
+
+      if (cls._id) {
+        localStorage.setItem('classId', cls._id);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'No class found for your account');
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, []);
   const card = `backdrop-blur-md rounded-2xl border transition-colors duration-300 ${
     isDark ? 'bg-white/5 border-white/10' : 'bg-white/80 border-gray-200'
   }`;
 
-  // ── Loading ──
   if (loading) return (
     <div className="space-y-6">
       <div className={`h-10 w-48 rounded-xl animate-pulse ${isDark ? 'bg-white/10' : 'bg-gray-200'}`} />
@@ -99,7 +103,6 @@ const StudentClasses = () => {
     </div>
   );
 
-  // ── Error ──
   if (error) return (
     <div className={`${card} p-12 text-center`}>
       <GraduationCap className={`w-12 h-12 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
@@ -110,10 +113,11 @@ const StudentClasses = () => {
     </div>
   );
 
-  const instructor = classData.instructorId;
-  const classmates = classData.studentIds || [];
-  // Remove current user from classmates list
-  const others = classmates.filter(s => s._id !== userId());
+  const currentUserId = localStorage.getItem('userId') || '';
+  const instructor    = classData.instructorId;
+  const classmates    = classData.studentIds || [];
+  // Remove current student from the list so they don't see themselves
+  const others = classmates.filter(s => (s._id ?? s) !== currentUserId);
 
   return (
     <div className="space-y-8">
@@ -130,8 +134,6 @@ const StudentClasses = () => {
 
       {/* Class Info Card */}
       <div className={`${card} p-6`}>
-
-        {/* Class name + status */}
         <div className="flex items-start justify-between gap-3 mb-5">
           <div>
             <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -148,7 +150,6 @@ const StudentClasses = () => {
           </span>
         </div>
 
-        {/* Meta */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <StatPill icon={Calendar} label="Academic Year" value={classData.academicYear} isDark={isDark} />
           <StatPill icon={Layers}   label="Semester"      value={classData.semester}     isDark={isDark} />
@@ -200,12 +201,16 @@ const StudentClasses = () => {
         ) : (
           <div className="space-y-2">
             {others.map((student, i) => (
-              <ClassmateCard key={student._id} student={student} index={i} isDark={isDark} />
+              <ClassmateCard
+                key={student._id ?? student}
+                student={typeof student === 'string' ? { _id: student, firstName: '?', lastName: '', email: '' } : student}
+                index={i}
+                isDark={isDark}
+              />
             ))}
           </div>
         )}
       </div>
-
     </div>
   );
 };

@@ -107,7 +107,7 @@ const ActivityLog = memo(({ isDark }) => {
         const token  = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         if (!token || !userId) return;
-        const res = await fetch(`http://127.0.0.1:3000/api/activity/${userId}`, {
+        const res = await fetch(`http://localhost:3000/api/activity/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error('Failed to load activity');
@@ -280,7 +280,7 @@ const StudentProfileSection = memo(({ userId, isDark }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token || !userId) return;
-        const res = await fetch(`http://127.0.0.1:3000/api/profile/${userId}/student`, {
+        const res = await fetch(`http://localhost:3000/api/profile/${userId}/student`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
@@ -317,7 +317,7 @@ const StudentProfileSection = memo(({ userId, isDark }) => {
     setMessage('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://127.0.0.1:3000/api/profile/${userId}/student`, {
+      const res = await fetch(`http://localhost:3000/api/profile/${userId}/student`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -459,7 +459,7 @@ const ProfileSettings = memo(() => {
         const token  = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         if (!token || !userId) return;
-        const res = await fetch(`http://127.0.0.1:3000/api/profile/${userId}`, {
+        const res = await fetch(`http://localhost:3000/api/profile/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error('Failed to load profile');
@@ -523,7 +523,7 @@ const ProfileSettings = memo(() => {
     try {
       const token  = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
-      const res = await fetch(`http://127.0.0.1:3000/api/profile/${userId}`, {
+      const res = await fetch(`http://localhost:3000/api/profile/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
@@ -928,7 +928,7 @@ const StudentSettings = () => {
         const token  = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         if (!token || !userId) return;
-        const res = await fetch(`http://127.0.0.1:3000/api/update_disabilities/${userId}/`, {
+        const res = await fetch(`http://localhost:3000/api/update_disabilities/${userId}/`, {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         });
         if (res.ok) {
@@ -956,7 +956,7 @@ const StudentSettings = () => {
       const token  = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
       if (!token || !userId) throw new Error('Session expired. Please login again.');
-      const res = await fetch(`http://127.0.0.1:3000/api/change_password/${userId}`, {
+      const res = await fetch(`http://localhost:3000/api/change_password/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -990,7 +990,7 @@ const StudentSettings = () => {
       const token  = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
       if (!token || !userId) throw new Error('Session expired. Please login again.');
-      const res = await fetch(`http://127.0.0.1:3000/api/update_disabilities/${userId}/`, {
+      const res = await fetch(`http://localhost:3000/api/update_disabilities/${userId}/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ disabilities }),

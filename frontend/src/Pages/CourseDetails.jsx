@@ -204,7 +204,7 @@ const CourseDetails = () => {
       const csrfToken = getCookie('csrftoken');
       const item_ids = reorderedContents.map(content => content.id);
       const response = await axios.post(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${selectedReorderChapterId}/contents/reorder/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${selectedReorderChapterId}/contents/reorder/`,
           { item_ids },
           {
             headers: {
@@ -232,10 +232,10 @@ const CourseDetails = () => {
     setLoading(true);
     setError(null);
 
-    const fetchCourse = axios.get(`http://127.0.0.1:3000/courses/${courseId}/`, {
+    const fetchCourse = axios.get(`http://localhost:3000/courses/${courseId}/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const fetchChapters = axios.get(`http://127.0.0.1:3000/courses/${courseId}/chapters/`, {
+    const fetchChapters = axios.get(`http://localhost:3000/courses/${courseId}/chapters/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     Promise.all([fetchCourse, fetchChapters])
@@ -263,7 +263,7 @@ const CourseDetails = () => {
   const fetchContentsForChapter = async (chapterId) => {
     try {
       const res = await axios.get(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -295,7 +295,7 @@ const CourseDetails = () => {
     try {
       const csrfToken = getCookie('csrftoken');
       const res = await axios.put(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/`,
           editData,
           {
             headers: {
@@ -321,7 +321,7 @@ const CourseDetails = () => {
     if (!window.confirm("Confirm deletion of this chapter ?")) return;
     try {
       const csrfToken = getCookie('csrftoken');
-      await axios.delete(`http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/`, {
+      await axios.delete(`http://localhost:3000/courses/${courseId}/chapters/${chapterId}/`, {
         headers: {
           'X-CSRFToken': csrfToken,
           Authorization: `Bearer ${token}`,
@@ -351,7 +351,7 @@ const CourseDetails = () => {
     try {
       const csrfToken = getCookie('csrftoken');
       const res = await axios.post(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/`,
+          `http://localhost:3000/courses/${courseId}/chapters/`,
           {
             title: newChapterTitle,
             description: newChapterDescription,
@@ -435,7 +435,7 @@ const CourseDetails = () => {
       }
 
       const res = await axios.post(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${selectedChapterId}/contents/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${selectedChapterId}/contents/`,
           formData,
           {
             headers: {
@@ -480,7 +480,7 @@ const CourseDetails = () => {
       }
 
       const res = await axios.put(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
           formData,
           {
             headers: {
@@ -510,7 +510,7 @@ const CourseDetails = () => {
 
     try {
       await axios.delete(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -540,7 +540,7 @@ const CourseDetails = () => {
 
     try {
       const res = await axios.patchForm(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
           { subtitle_file: file },
           {
             headers: {
@@ -567,7 +567,7 @@ const CourseDetails = () => {
 
     try {
       await axios.patchForm(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
           { subtitle_file: '' },
           {
             headers: {
@@ -624,7 +624,7 @@ const CourseDetails = () => {
       const item_ids = reorderedChapters.map(chapter => chapter.id);
 
       const response = await axios.post(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/reorder/`,
+          `http://localhost:3000/courses/${courseId}/chapters/reorder/`,
           { item_ids },
           {
             headers: {

@@ -8,11 +8,14 @@ import { useTheme } from '../context/ThemeContect.jsx';
 
 const BASE_URL = 'http://localhost:3000';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const userId = () => localStorage.getItem('userId') || '';
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+});
 
-// ─── Feedback Banner ─────────────────────────────────────────────────────────
+// ─── Feedback Banner ──────────────────────────────────────────────────────────
 
 const Banner = memo(({ message }) => {
   if (!message) return null;
@@ -36,14 +39,14 @@ const ClassModal = memo(({ initial, onClose, onSaved, isDark }) => {
   const isEdit = !!initial?._id;
 
   const empty = { name: '', description: '', academicYear: '', semester: '' };
-  const [form, setForm]       = useState(initial ? {
+  const [form, setForm]     = useState(initial ? {
     name:         initial.name         || '',
     description:  initial.description  || '',
     academicYear: initial.academicYear || '',
     semester:     initial.semester     || '',
   } : empty);
-  const [saving,   setSaving]   = useState(false);
-  const [message,  setMessage]  = useState('');
+  const [saving,  setSaving]  = useState(false);
+  const [message, setMessage] = useState('');
 
   const inputCls = `w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 text-sm ${
     isDark
@@ -68,15 +71,12 @@ const ClassModal = memo(({ initial, onClose, onSaved, isDark }) => {
       const url    = isEdit
         ? `${BASE_URL}/classes/${initial._id}`
         : `${BASE_URL}/classes`;
-
-      // For new classes, attach the instructorId from localStorage
-      const body = isEdit ? form : { ...form, instructorId: userId() };
-
-      const res  = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+        
+      const res = await fetch(url, {
+  method,
+  headers: authHeaders(),
+  body: JSON.stringify(form),
+});
 
       if (!res.ok) {
         const err = await res.json();
@@ -100,7 +100,9 @@ const ClassModal = memo(({ initial, onClose, onSaved, isDark }) => {
       }`}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <div className={`flex items-center justify-between px-6 py-4 border-b ${
+  isDark ? 'border-white/10' : 'border-gray-200'
+}`}>
           <h2 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             <BookOpen className="w-5 h-5 text-red-500" />
             {isEdit ? 'Edit Class' : 'Create New Class'}
@@ -113,7 +115,6 @@ const ClassModal = memo(({ initial, onClose, onSaved, isDark }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-
           <div>
             <label className={labelCls}>Class Name *</label>
             <input name="name" value={form.name} onChange={handleChange}
@@ -146,7 +147,6 @@ const ClassModal = memo(({ initial, onClose, onSaved, isDark }) => {
 
           <Banner message={message} />
 
-          {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
               className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
@@ -161,7 +161,6 @@ const ClassModal = memo(({ initial, onClose, onSaved, isDark }) => {
                 : <><Save className="w-4 h-4" />{isEdit ? 'Update' : 'Create'}</>}
             </button>
           </div>
-
         </form>
       </div>
     </div>
@@ -179,7 +178,9 @@ const StudentList = memo(({ classId, isDark }) => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${BASE_URL}/classes/${classId}/students`);
+        const res = await fetch(`${BASE_URL}/classes/${classId}/students`, {
+          headers: authHeaders(),   // ← fixed
+        });
         if (!res.ok) throw new Error('Failed to load students');
         const data = await res.json();
         setStudents(data);
@@ -216,7 +217,6 @@ const StudentList = memo(({ classId, isDark }) => {
         <div key={s._id} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border ${
           isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
         }`}>
-          {/* Avatar */}
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold">
               {(s.firstName?.[0] || '?').toUpperCase()}{(s.lastName?.[0] || '').toUpperCase()}
@@ -248,10 +248,8 @@ const ClassCard = memo(({ cls, onEdit, onCancel, isDark }) => {
       isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'
     } ${!cls.isActive ? 'opacity-60' : ''}`}>
 
-      {/* Card Header */}
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className={`text-base font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -268,8 +266,6 @@ const ClassCard = memo(({ cls, onEdit, onCancel, isDark }) => {
                 {cls.description}
               </p>
             )}
-
-            {/* Meta pills */}
             <div className="flex flex-wrap gap-2">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
                 isDark ? 'bg-white/5 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'
@@ -289,7 +285,6 @@ const ClassCard = memo(({ cls, onEdit, onCancel, isDark }) => {
             </div>
           </div>
 
-          {/* Action Buttons */}
           {cls.isActive && (
             <div className="flex gap-2 flex-shrink-0">
               <button onClick={() => onEdit(cls)}
@@ -306,7 +301,6 @@ const ClassCard = memo(({ cls, onEdit, onCancel, isDark }) => {
           )}
         </div>
 
-        {/* Expand / Collapse */}
         <button
           onClick={() => setExpanded(p => !p)}
           className={`mt-3 flex items-center gap-1.5 text-xs font-medium transition-colors ${
@@ -318,7 +312,6 @@ const ClassCard = memo(({ cls, onEdit, onCancel, isDark }) => {
         </button>
       </div>
 
-      {/* Student List */}
       {expanded && (
         <div className={`px-5 pb-5 border-t ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
           <StudentList classId={cls._id} isDark={isDark} />
@@ -370,20 +363,24 @@ const ClassManagement = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const [classes,     setClasses]     = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState('');
-  const [showModal,   setShowModal]   = useState(false);
-  const [editTarget,  setEditTarget]  = useState(null);   // class being edited
-  const [cancelId,    setCancelId]    = useState(null);   // class id pending cancel
-  const [banner,      setBanner]      = useState('');
+  const [classes,    setClasses]    = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
+  const [showModal,  setShowModal]  = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [cancelId,   setCancelId]   = useState(null);
+  const [banner,     setBanner]     = useState('');
 
-  // Load instructor's classes
   const loadClasses = useCallback(async () => {
     setLoading(true);
     setError('');
+      console.log('TOKEN:', localStorage.getItem('token')); // ← add this
     try {
-      const res = await fetch(`${BASE_URL}/classes/instructor/${userId()}`);
+      const res = await fetch(`${BASE_URL}/classes/instructor/mine`, {
+        headers: authHeaders(),   // ← fixed
+      });
+          console.log('STATUS:', res.status); // ← and this
+
       if (!res.ok) throw new Error('Failed to load classes');
       const data = await res.json();
       setClasses(data);
@@ -396,21 +393,19 @@ const ClassManagement = () => {
 
   useEffect(() => { loadClasses(); }, [loadClasses]);
 
-  // Called after modal saves
-  const handleSaved = useCallback((saved, isEdit) => {
-    if (isEdit) {
-      setClasses(prev => prev.map(c => c._id === saved._id ? saved : c));
-    } else {
-      setClasses(prev => [saved, ...prev]);
-    }
-    setBanner('Class saved successfully!');
-    setTimeout(() => setBanner(''), 3000);
-  }, []);
+  // ClassManagement.jsx — replace handleSaved
+const handleSaved = useCallback(() => {
+  setBanner('Class saved successfully!');
+  setTimeout(() => setBanner(''), 3000);
+  loadClasses(); // re-fetch from server — no more stale optimistic state
+}, [loadClasses]);
 
-  // Soft delete
   const handleCancel = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE_URL}/classes/${cancelId}`, { method: 'DELETE' });
+      const res = await fetch(`${BASE_URL}/classes/${cancelId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),   // ← fixed
+      });
       if (!res.ok) throw new Error('Failed to cancel class');
       setClasses(prev => prev.map(c => c._id === cancelId ? { ...c, isActive: false } : c));
       setBanner('Class cancelled successfully!');
@@ -448,10 +443,8 @@ const ClassManagement = () => {
         </button>
       </div>
 
-      {/* Banner */}
       {banner && <Banner message={banner} />}
 
-      {/* Content */}
       {loading ? (
         <div className="grid sm:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map(i => (
@@ -495,7 +488,6 @@ const ClassManagement = () => {
         </div>
       )}
 
-      {/* Modals */}
       {showModal && (
         <ClassModal
           initial={editTarget}

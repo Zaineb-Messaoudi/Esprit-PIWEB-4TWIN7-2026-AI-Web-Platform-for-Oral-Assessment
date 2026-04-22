@@ -72,6 +72,20 @@ export class AuthService {
     private auditService: AuditService,
   ) {}
 
+  // ── Shared ban check ──────────────────────────────────────────────────────
+  // Called before issuing ANY token (password login, OAuth, face login, etc.)
+  private assertAccountAccessible(user: UserDocument | User): void {
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is disabled');
+    }
+    const _expires = user.banExpiresAt;
+    if (_expires && new Date(_expires) > new Date()) {
+      throw new UnauthorizedException(
+        `Account is temporarily banned until ${new Date(_expires).toISOString()}`,
+      );
+    }
+  }
+
   // ── Generate Username ─────────────────────────────────────────────────────
   private async generateUsername(
     firstName: string,
@@ -80,7 +94,7 @@ export class AuthService {
     const baseUsername = `${firstName}${lastName}`
       .toLowerCase()
       .replace(/\s+/g, '')
-      .replace(/[^a-z0-9]/g, ''); // strip non-alphanumeric so names like "4twin" stay clean
+      .replace(/[^a-z0-9]/g, '');
 
     const base = baseUsername || 'user';
     let username = base;
@@ -100,7 +114,7 @@ export class AuthService {
       { email, otp, purpose: 'email_verification' },
       {
         secret: process.env.JWT_OTP_SECRET || 'otp-secret-key',
-        expiresIn: '10m',
+        expiresIn: '24h',
       },
     );
   }
@@ -111,7 +125,7 @@ export class AuthService {
       { email, otp, purpose: 'password_reset' },
       {
         secret: process.env.JWT_OTP_SECRET || 'otp-secret-key',
-        expiresIn: '10m',
+        expiresIn: '24h',
       },
     );
   }
@@ -158,7 +172,7 @@ export class AuthService {
       password: hashed,
       firstName: dto.first_name,
       lastName: dto.last_name,
-      role: dto.user_type as UserRole,
+      role: dto.user_type,
       cin: dto.cin,
       phone: dto.phone_num,
       dateOfBirth: new Date(dto.birth_date),
@@ -179,7 +193,6 @@ export class AuthService {
           dto.face_image,
         );
         faceEnrolled = true;
-
         void this.auditService.log({
           userId: user._id.toString(),
           event: ActivityEventType.FACE_ENROLLED,
@@ -224,10 +237,7 @@ export class AuthService {
 
     await this.mailService.sendOtp(user._id, email, otp);
 
-    return {
-      message: 'OTP sent to your email',
-      otp_token: otpToken,
-    };
+    return { message: 'OTP sent to your email', otp_token: otpToken };
   }
 
   // ── Verify OTP ────────────────────────────────────────────────────────────
@@ -338,7 +348,9 @@ export class AuthService {
 
     const user = await this.userModel.findOne({ username }).select('+password');
     if (!user) throw new UnauthorizedException('Invalid credentials');
-    if (!user.isActive) throw new UnauthorizedException('Account is disabled');
+
+    // ✅ shared check covers both isActive and banExpiresAt
+    this.assertAccountAccessible(user);
 
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) {
@@ -397,22 +409,27 @@ export class AuthService {
       }
 
       const user = await this.userModel.findById(decoded.sub);
-      if (!user || !user.isActive) throw new UnauthorizedException();
+      if (!user) throw new UnauthorizedException('User not found');
+
+      // ✅ also block banned users from silently refreshing their token
+      this.assertAccountAccessible(user);
 
       const access_token = this.jwtService.sign(
         { sub: user._id.toString(), username: user.username, role: user.role },
         {
           secret: process.env.JWT_SECRET || 'your-secret-key',
-          expiresIn: '15m',
+          expiresIn: '24h',
         },
       );
 
       return { access: access_token };
-    } catch {
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
       throw new UnauthorizedException('Refresh token invalid or expired');
     }
   }
 
+  // ── OAuth: find or create user ────────────────────────────────────────────
   async findOrCreateOAuthUser(data: {
     email: string;
     firstName: string;
@@ -429,24 +446,29 @@ export class AuthService {
 
     if (existingSocial) {
       const user = await this.userModel.findById(existingSocial.userId);
-      if (!user) {
-        throw new Error('Linked user not found');
-      }
+      if (!user) throw new Error('Linked user not found');
+
+      // ✅ FIX: banned/inactive users must not get a token via Google either
+      this.assertAccountAccessible(user);
+
       return user;
     }
 
     // 2️⃣ Check if user exists by email
     let user = await this.userModel.findOne({ email: data.email });
 
-    if (!user) {
-      // 3️⃣ Create new user
+    if (user) {
+      // ✅ FIX: existing account found by email — still check ban status
+      this.assertAccountAccessible(user);
+    } else {
+      // 3️⃣ Create new user (brand new account, always active)
       user = await this.userModel.create({
         email: data.email,
         username: data.email.split('@')[0],
         firstName: data.firstName,
         lastName: data.lastName,
         role: UserRole.STUDENT,
-        password: crypto.randomUUID(), // dummy
+        password: crypto.randomUUID(),
         phone: '00000000',
         dateOfBirth: new Date('2000-01-01'),
         oauthProviders: [data.provider],
@@ -473,14 +495,13 @@ export class AuthService {
     const user = await this.userModel.findById(userId);
     if (!user) throw new BadRequestException('User not found');
 
-    // Generate a clean username from the real name provided by the user
     const username = await this.generateUsername(dto.first_name, dto.last_name);
 
     await this.userModel.updateOne(
       { _id: userId },
       {
         username,
-        role: dto.user_type as UserRole,
+        role: dto.user_type,
         firstName: dto.first_name,
         lastName: dto.last_name,
         phone: dto.phone_num,
@@ -490,7 +511,6 @@ export class AuthService {
       },
     );
 
-    // Optional face enroll
     let faceEnrolled = false;
     if (dto.face_image) {
       try {
@@ -514,7 +534,6 @@ export class AuthService {
       req,
     });
 
-    // Re-fetch to build tokens with the updated username + role
     const updatedUser = await this.userModel.findById(userId);
     if (!updatedUser)
       throw new BadRequestException('User not found after update');
@@ -533,7 +552,6 @@ export class AuthService {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  // In AuthService
   public generateTokens(user: UserDocument) {
     const payload = {
       sub: user._id.toString(),
@@ -543,7 +561,7 @@ export class AuthService {
 
     const access_token = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET || 'your-secret-key',
-      expiresIn: '15m',
+      expiresIn: '24h',
     });
 
     const refresh_token = this.jwtService.sign(payload, {

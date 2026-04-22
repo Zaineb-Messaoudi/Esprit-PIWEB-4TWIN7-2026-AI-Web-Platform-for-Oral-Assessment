@@ -38,7 +38,7 @@ const CreateQuiz = () => {
     console.log('Sending quiz data:', JSON.stringify(formattedQuizData, null, 2));
 
     try {
-      const response = await fetch('http://127.0.0.1:3000/quizzes/', {
+      const response = await fetch('http://localhost:3000/quizzes/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

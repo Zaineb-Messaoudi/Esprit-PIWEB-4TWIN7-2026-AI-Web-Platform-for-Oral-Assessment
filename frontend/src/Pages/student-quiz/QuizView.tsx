@@ -18,7 +18,7 @@ const QuizView = () => {
       navigate('/login');
       return;
     }
-    fetch(`http://127.0.0.1:3000/quizzes/${id}/`, {
+    fetch(`http://localhost:3000/quizzes/${id}/`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => {

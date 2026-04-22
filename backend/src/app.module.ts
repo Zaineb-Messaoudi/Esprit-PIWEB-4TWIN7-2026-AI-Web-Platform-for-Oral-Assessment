@@ -14,6 +14,9 @@ import { EmailNotificationsModule } from './email-notifications/email-notificati
 import { ProfileModule } from './profile/profile.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
+import { SessionsModule } from './sessions/sessions.module';
+import { AssignmentsModule } from './assignements/assignements.module';
+import { SessionsGateway } from './sessions/sessions.gateway';
 
 @Module({
   imports: [
@@ -34,8 +37,10 @@ import { AdminModule } from './admin/admin.module';
     EmailNotificationsModule,
     AuthModule,
     AdminModule,
+    SessionsModule,
+    AssignmentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, SessionsGateway],
 })
 export class AppModule {}

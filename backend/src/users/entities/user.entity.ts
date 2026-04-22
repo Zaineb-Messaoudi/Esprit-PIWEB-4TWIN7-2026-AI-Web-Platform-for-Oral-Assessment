@@ -130,6 +130,15 @@ export class User {
 
   @Prop({ default: false })
   profileIncomplete!: boolean;
+
+  @Prop({ default: false })
+  isBanned?: boolean;
+
+  @Prop()
+  banExpiresAt?: Date;
+
+  @Prop()
+  banReason?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

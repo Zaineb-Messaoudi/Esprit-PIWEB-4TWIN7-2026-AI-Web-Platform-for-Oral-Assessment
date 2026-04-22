@@ -22,7 +22,7 @@ const EditQuiz = () => {
       return;
     }
 
-    fetch(`http://127.0.0.1:3000/quizzes/${id}/`, {
+    fetch(`http://localhost:3000/quizzes/${id}/`, {
       headers: { 'Authorization': `Bearer ${token}` },
     })
         .then(res => res.json())
@@ -71,7 +71,7 @@ const EditQuiz = () => {
     console.log('Updating quiz:', JSON.stringify(formattedQuizData, null, 2));
 
     try {
-      const response = await fetch(`http://127.0.0.1:3000/quizzes/${id}/`, {
+      const response = await fetch(`http://localhost:3000/quizzes/${id}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

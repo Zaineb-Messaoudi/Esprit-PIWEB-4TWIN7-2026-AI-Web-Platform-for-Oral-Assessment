@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsArray,
   IsMongoId,
-  IsBoolean,
 } from 'class-validator';
 
 export class CreateClassDto {
@@ -16,9 +15,11 @@ export class CreateClassDto {
   @IsString()
   description?: string;
 
-  @IsNotEmpty()
+  // instructorId injected from JWT in the service for instructor role,
+  // or sent explicitly only by admin
+  @IsOptional()
   @IsMongoId()
-  instructorId!: string;
+  instructorId?: string;
 
   @IsOptional()
   @IsArray()
@@ -32,8 +33,4 @@ export class CreateClassDto {
   @IsNotEmpty()
   @IsString()
   semester!: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
 }

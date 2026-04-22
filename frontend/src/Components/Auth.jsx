@@ -702,7 +702,7 @@ const OtpComponent = ({ email, username, otpToken: initialOtpToken, onVerified, 
     setLoading(true);
     setError(null);
     try {
-      const res  = await fetch('http://127.0.0.1:3000/api/verify-otp', {
+      const res  = await fetch('http://localhost:3000/api/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: code, otp_token: otpToken }),
       });
@@ -720,7 +720,7 @@ const OtpComponent = ({ email, username, otpToken: initialOtpToken, onVerified, 
     setResending(true);
     setError(null);
     try {
-      const res  = await fetch('http://127.0.0.1:3000/api/resend-otp', {
+      const res  = await fetch('http://localhost:3000/api/resend-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
@@ -825,7 +825,7 @@ const ForgotPasswordComponent = ({ onCodeSent, onBack }) => {
     setLoading(true);
     setError(null);
     try {
-      const res  = await fetch('http://127.0.0.1:3000/api/forgot-password', {
+      const res  = await fetch('http://localhost:3000/api/forgot-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
@@ -945,7 +945,7 @@ const ResetOtpComponent = ({ email, resetToken: initialResetToken, onVerified, o
     setResending(true);
     setError(null);
     try {
-      const res  = await fetch('http://127.0.0.1:3000/api/forgot-password', {
+      const res  = await fetch('http://localhost:3000/api/forgot-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
@@ -1069,7 +1069,7 @@ const ResetNewPasswordComponent = ({ email, otp, resetToken, onSuccess, onBack }
     setLoading(true);
     setErrors({});
     try {
-      const res = await fetch('http://127.0.0.1:3000/api/reset-password', {
+      const res = await fetch('http://localhost:3000/api/reset-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
@@ -1236,7 +1236,7 @@ const CompleteProfileScreen = ({ accessToken, prefilledImage, onComplete }) => {
     if (Object.keys(e).length) { setErrors(e); return; }
     setLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:3000/api/complete-profile', {
+      const res = await fetch('http://localhost:3000/api/complete-profile', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1444,7 +1444,7 @@ const SignInComponent = ({ onSubmit, onForgotPassword, prefillUsername = '' }) =
     if (Object.keys(e).length) { setErrors(e); return; }
     setLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/login', {
+      const response = await fetch('http://localhost:3000/api/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
@@ -1577,7 +1577,7 @@ const SignUpComponent = ({ onSubmit }) => {
     if (Object.keys(e).length) { setErrors(e); return; }
     setLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/register', {
+      const response = await fetch('http://localhost:3000/api/register', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, face_image: faceImage }),
       });

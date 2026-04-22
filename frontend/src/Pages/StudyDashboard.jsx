@@ -21,6 +21,7 @@ import {
   Sun,
   Moon,
   Layers,
+  Video,
 } from 'lucide-react';
 
 import StudyOverview from './StudyOverview';
@@ -99,12 +100,12 @@ const StudyDashboard = () => {
 
   const menuItems = [
     { id: 'overview',      label: 'Overview',             icon: Home,          description: 'Study summary and quick insights',      path: ''            },
-    { id: 'courses',       label: 'My Courses',           icon: BookOpen,      description: 'Explore your enrolled courses',         path: 'courses'     },
-    { id: 'all-courses',   label: 'All Courses',          icon: GraduationCap, description: 'Explore our courses',                   path: 'all-courses' },
     { id: 'ExamsQuiz',     label: 'Exams & Quizzes',      icon: FileText,      description: 'Upcoming tests and past results',       path: 'quizzes'     },
     // ─── Class Management ──────────────────────────────────────────────────────
     { id: 'classes',       label: 'My Class',             icon: Layers,        description: 'View your class and classmates',        path: 'classes'     },
-    { id: 'assignments',   label: 'Assignments',          icon: Target,        description: 'Track and submit assignments',           path: 'assignments' },
+    { id: 'Submissions',   label: 'Submissions',         icon: Target,      description: 'Review your submission history',         path: 'submissionshistory' },
+    { id: 'assignments',   label: 'Assignments',         icon: Target,      description: 'Track and submit assignments',           path: 'assignments' },
+    { id: 'sessions',      label: 'My Session',           icon: Video,        description: 'Check your slot and record',             path: 'sessions' },
     { id: 'schedule',      label: 'Schedule',             icon: Calendar,      description: 'Daily and weekly learning schedule',    path: 'schedule'    },
     { id: 'progress',      label: 'Progress & Analytics', icon: TrendingUp,    description: 'Your learning analytics and goals',     path: 'progress'    },
     { id: 'achievements',  label: 'Achievements',         icon: Award,         description: 'Your badges and certificates',          path: 'achievements'},

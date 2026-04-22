@@ -1,16 +1,16 @@
+// TeacherManagement.jsx
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   User, Mail, Phone, Calendar, FileText, GraduationCap,
-  Edit, Trash2, UserX, UserCheck, Plus, Shield, Monitor,
-  MapPin, Clock, ChevronRight, ArrowLeft, BookOpen
+  Edit, Trash2, UserX, UserCheck, Plus, Monitor,
+  MapPin, Clock, ChevronRight, ArrowLeft, BookOpen, Filter, CheckSquare, Square, Timer
 } from 'lucide-react';
 import TeacherForm from '../Components/TeacherForm';
 import SearchBar from '../Components/SearchBar';
 import { useTheme } from '../context/ThemeContect.jsx';
 
-const API = 'http://127.0.0.1:3000/api/admin';
-
+const API = 'http://localhost:3000/api/admin';
 const authHeaders = () => {
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -23,40 +23,29 @@ const EVENT_LABELS = {
   email_verified: 'Email verified', profile_updated: 'Profile updated',
   face_enrolled: 'Face enrolled', account_created: 'Account created',
 };
-
 const EVENT_COLORS = {
-  login: 'text-green-500 bg-green-500/10',
-  login_face: 'text-green-500 bg-green-500/10',
-  login_oauth: 'text-blue-500 bg-blue-500/10',
-  login_failed: 'text-red-500 bg-red-500/10',
-  logout: 'text-gray-500 bg-gray-500/10',
-  password_changed: 'text-yellow-500 bg-yellow-500/10',
-  password_reset: 'text-orange-500 bg-orange-500/10',
-  email_verified: 'text-teal-500 bg-teal-500/10',
-  profile_updated: 'text-purple-500 bg-purple-500/10',
-  face_enrolled: 'text-indigo-500 bg-indigo-500/10',
+  login: 'text-green-500 bg-green-500/10', login_face: 'text-green-500 bg-green-500/10',
+  login_oauth: 'text-blue-500 bg-blue-500/10', login_failed: 'text-red-500 bg-red-500/10',
+  logout: 'text-gray-500 bg-gray-500/10', password_changed: 'text-yellow-500 bg-yellow-500/10',
+  password_reset: 'text-orange-500 bg-orange-500/10', email_verified: 'text-teal-500 bg-teal-500/10',
+  profile_updated: 'text-purple-500 bg-purple-500/10', face_enrolled: 'text-indigo-500 bg-indigo-500/10',
   account_created: 'text-emerald-500 bg-emerald-500/10',
 };
 
 // ─── Detail View ──────────────────────────────────────────────────────────────
 
-const TeacherDetail = ({ teacherId, onBack, onEdit, onDeactivate, onActivate, onHardDelete, isDark, loadingId }) => {
-  const [detail, setDetail] = useState(null);
+const TeacherDetail = ({ teacherId, onBack, onEdit, onDeactivate, onActivate, onHardDelete, onBan, isDark, loadingId }) => {
+  const [detail,  setDetail]  = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios.get(`${API}/teachers/${teacherId}`, { headers: authHeaders() })
-      .then(res => {
-        setDetail(res.data);
-        setLoading(false);
-      })
-      .catch(e => {
-        console.error('Error fetching teacher detail:', e);
-        setLoading(false);
-      });
+      .then(res => setDetail(res.data))
+      .catch(e => console.error('Error fetching teacher detail:', e))
+      .finally(() => setLoading(false));
   }, [teacherId]);
 
-  const sub = isDark ? 'text-gray-400' : 'text-gray-500';
+  const sub  = isDark ? 'text-gray-400' : 'text-gray-500';
   const card = isDark ? 'bg-gray-800/60 border-gray-700' : 'bg-gray-50 border-gray-200';
 
   if (loading) return (
@@ -64,7 +53,6 @@ const TeacherDetail = ({ teacherId, onBack, onEdit, onDeactivate, onActivate, on
       <div className="w-10 h-10 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
     </div>
   );
-
   if (!detail) return (
     <div className="text-center py-32">
       <p className={sub}>Failed to load details.</p>
@@ -74,36 +62,39 @@ const TeacherDetail = ({ teacherId, onBack, onEdit, onDeactivate, onActivate, on
 
   return (
     <div className="space-y-6">
-      {/* Top bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <button onClick={onBack}
-          className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-red-500 ${sub}`}>
+        <button onClick={onBack} className={`flex items-center gap-2 text-sm font-medium hover:text-red-500 ${sub}`}>
           <ArrowLeft className="w-4 h-4" /> Back to teachers
         </button>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => onEdit(detail)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isDark ? 'text-blue-400 hover:bg-blue-400/10' : 'text-blue-500 hover:bg-blue-50'}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium ${isDark ? 'text-blue-400 hover:bg-blue-400/10' : 'text-blue-500 hover:bg-blue-50'}`}>
             <Edit className="w-3.5 h-3.5" /> Edit
           </button>
           {detail.is_active ? (
-            <button onClick={() => onDeactivate(detail.id)} disabled={loadingId === detail.id}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${isDark ? 'text-yellow-400 hover:bg-yellow-400/10' : 'text-yellow-500 hover:bg-yellow-50'}`}>
-              <UserX className="w-3.5 h-3.5" /> Deactivate
-            </button>
+            <>
+              <button onClick={() => onDeactivate(detail.id)} disabled={loadingId === detail.id}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 ${isDark ? 'text-yellow-400 hover:bg-yellow-400/10' : 'text-yellow-500 hover:bg-yellow-50'}`}>
+                <UserX className="w-3.5 h-3.5" /> Deactivate
+              </button>
+              <button onClick={() => onBan(detail.id)} disabled={loadingId === detail.id}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 ${isDark ? 'text-orange-400 hover:bg-orange-400/10' : 'text-orange-500 hover:bg-orange-50'}`}>
+                <Timer className="w-3.5 h-3.5" /> Temp Ban
+              </button>
+            </>
           ) : (
             <button onClick={() => onActivate(detail.id)} disabled={loadingId === detail.id}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${isDark ? 'text-green-400 hover:bg-green-400/10' : 'text-green-500 hover:bg-green-50'}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 ${isDark ? 'text-green-400 hover:bg-green-400/10' : 'text-green-500 hover:bg-green-50'}`}>
               <UserCheck className="w-3.5 h-3.5" /> Activate
             </button>
           )}
           <button onClick={() => onHardDelete(detail.id)} disabled={loadingId === detail.id}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${isDark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-500 hover:bg-red-50'}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 ${isDark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-500 hover:bg-red-50'}`}>
             <Trash2 className="w-3.5 h-3.5" /> Delete
           </button>
         </div>
       </div>
 
-      {/* Identity */}
       <div className={`rounded-2xl border p-6 ${card}`}>
         <div className="flex items-center gap-5 mb-6">
           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-md flex-shrink-0 ${isDark ? 'bg-gradient-to-br from-red-500 to-gray-600' : 'bg-gradient-to-br from-red-400 to-red-600'}`}>
@@ -119,21 +110,16 @@ const TeacherDetail = ({ teacherId, onBack, onEdit, onDeactivate, onActivate, on
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'}`}>Teacher</span>
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${detail.is_active
                 ? (isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-600')
-                : (isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')}`}>
+                : (isDark ? 'bg-gray-700 text-gray-400'      : 'bg-gray-200 text-gray-500')}`}>
                 {detail.is_active ? 'Active' : 'Inactive'}
               </span>
-              {detail.is_email_verified && (
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-600'}`}>
-                  Email verified
-                </span>
-              )}
             </div>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           {[
-            { icon: Mail, value: detail.email },
-            { icon: Phone, value: detail.phone_num },
+            { icon: Mail,     value: detail.email },
+            { icon: Phone,    value: detail.phone_num },
             { icon: FileText, value: detail.cin ? `CIN: ${detail.cin}` : null },
             { icon: Calendar, value: detail.birth_date ? new Date(detail.birth_date).toLocaleDateString() : null },
           ].filter(r => r.value).map(({ icon: Icon, value }, i) => (
@@ -147,7 +133,6 @@ const TeacherDetail = ({ teacherId, onBack, onEdit, onDeactivate, onActivate, on
         </div>
       </div>
 
-      {/* Instructor profile */}
       {detail.profile && (
         <div className={`rounded-2xl border p-6 ${card}`}>
           <h3 className={`text-xs font-semibold uppercase tracking-wide mb-4 flex items-center gap-2 ${sub}`}>
@@ -168,45 +153,26 @@ const TeacherDetail = ({ teacherId, onBack, onEdit, onDeactivate, onActivate, on
         </div>
       )}
 
-      {/* OAuth */}
-      {detail.oauth_providers?.length > 0 && (
-        <div className={`rounded-2xl border p-6 ${card}`}>
-          <h3 className={`text-xs font-semibold uppercase tracking-wide mb-3 flex items-center gap-2 ${sub}`}>
-            <Shield className="w-4 h-4" /> Connected Providers
-          </h3>
-          <div className="flex gap-2 flex-wrap">
-            {detail.oauth_providers.map(p => (
-              <span key={p} className={`text-sm px-3 py-1 rounded-full font-medium capitalize ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-600'}`}>{p}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Activity Log */}
       <div className={`rounded-2xl border p-6 ${card}`}>
         <h3 className={`text-xs font-semibold uppercase tracking-wide mb-4 flex items-center gap-2 ${sub}`}>
           <Clock className="w-4 h-4" /> Activity Log
         </h3>
-        {!detail.activity_log?.length ? (
-          <p className={`text-sm italic ${sub}`}>No activity recorded yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {detail.activity_log.map((entry, idx) => (
-              <div key={idx} className={`flex items-start gap-4 p-3 rounded-xl border ${isDark ? 'bg-gray-900/50 border-gray-700' : 'bg-white border-gray-100'}`}>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 mt-0.5 ${EVENT_COLORS[entry.event] ?? 'text-gray-500 bg-gray-500/10'}`}>
-                  {EVENT_LABELS[entry.event] ?? entry.event}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    {entry.device && <span className={`flex items-center gap-1 ${sub}`}><Monitor className="w-3 h-3" />{entry.device}</span>}
-                    {entry.ip && <span className={`flex items-center gap-1 ${sub}`}><MapPin className="w-3 h-3" />{entry.ip}</span>}
+        {!detail.activity_log?.length
+          ? <p className={`text-sm italic ${sub}`}>No activity recorded yet.</p>
+          : (
+            <div className="space-y-2">
+              {detail.activity_log.map((entry, idx) => (
+                <div key={idx} className={`flex items-start gap-4 p-3 rounded-xl border ${isDark ? 'bg-gray-900/50 border-gray-700' : 'bg-white border-gray-100'}`}>
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 mt-0.5 ${EVENT_COLORS[entry.event] ?? 'text-gray-500 bg-gray-500/10'}`}>
+                    {EVENT_LABELS[entry.event] ?? entry.event}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-xs mt-1 ${sub}`}>{new Date(entry.timestamp).toLocaleString()}</p>
                   </div>
-                  <p className={`text-xs mt-1 ${sub}`}>{new Date(entry.timestamp).toLocaleString()}</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );
@@ -218,48 +184,52 @@ const TeacherManagement = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const [teachers, setTeachers] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [currentTeacher, setCurrentTeacher] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loadingId, setLoadingId] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
+  const [teachers,         setTeachers]         = useState([]);
+  const [showForm,         setShowForm]         = useState(false);
+  const [currentTeacher,   setCurrentTeacher]   = useState(null);
+  const [searchTerm,       setSearchTerm]       = useState('');
+  const [statusFilter,     setStatusFilter]     = useState('all');
+  const [selectedTeachers, setSelectedTeachers] = useState([]);
+  const [loadingId,        setLoadingId]        = useState(null);
+  const [selectedId,       setSelectedId]       = useState(null);
 
-  useEffect(() => {
-    axios.get(`${API}/teachers`, { headers: authHeaders() })
-      .then(res => setTeachers(res.data))
-      .catch(e => console.error('Error fetching teachers:', e));
-  }, []);
+  useEffect(() => { fetchTeachers(); }, []);
 
-  const filteredTeachers = teachers.filter(t =>
-    `${t.first_name} ${t.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchTeachers = async () => {
+    try {
+      const res = await axios.get(`${API}/teachers`, { headers: authHeaders() });
+      setTeachers(res.data);
+    } catch (e) { console.error('Error fetching teachers:', e); }
+  };
 
-  const handleEdit = (teacher) => { setCurrentTeacher(teacher); setShowForm(true); setSelectedId(null); };
-  const handleCancel = () => { setShowForm(false); setCurrentTeacher(null); };
+  const filteredTeachers = teachers.filter(t => {
+    const matchesSearch  = `${t.first_name} ${t.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus  = statusFilter === 'all' ? true : statusFilter === 'active' ? t.is_active : !t.is_active;
+    return matchesSearch && matchesStatus;
+  });
 
-  const handleSubmit = async (teacherData) => {
+  // ✅ Pass raw API object — TeacherForm handles both snake_case and camelCase
+  const handleEdit   = (teacher) => { setCurrentTeacher(teacher); setShowForm(true); setSelectedId(null); };
+  const handleCancel = ()         => { setShowForm(false); setCurrentTeacher(null); };
+
+  const handleSubmit = async (payload) => {
     try {
       if (currentTeacher) {
-        const res = await axios.put(`${API}/teachers/${currentTeacher.id}`, teacherData, { headers: authHeaders() });
-        setTeachers(prev => prev.map(t => t.id === currentTeacher.id ? { ...t, ...res.data } : t));
+        await axios.put(`${API}/teachers/${currentTeacher.id}`, payload, { headers: authHeaders() });
       } else {
-        const res = await axios.post(`${API}/teachers`, teacherData, { headers: authHeaders() });
-        setTeachers(prev => [...prev, res.data]);
+        await axios.post(`${API}/teachers`, payload, { headers: authHeaders() });
       }
+      fetchTeachers();
       setShowForm(false);
       setCurrentTeacher(null);
-    } catch (e) {
-      console.error('Error saving teacher:', e.response?.data || e.message);
-      alert(`Failed to ${currentTeacher ? 'update' : 'create'} teacher.`);
-    }
+    } catch (e) { alert('Failed to save teacher.'); }
   };
 
   const handleDeactivate = async (id) => {
     if (!window.confirm('Deactivate this teacher?')) return;
     setLoadingId(id);
     try {
-      await axios.delete(`${API}/teachers/${id}/deactivate`, { headers: authHeaders() });
+      await axios.put(`${API}/users/${id}/deactivate`, {}, { headers: authHeaders() });
       setTeachers(prev => prev.map(t => t.id === id ? { ...t, is_active: false } : t));
       setSelectedId(null);
     } catch (e) { console.error(e); } finally { setLoadingId(null); }
@@ -268,42 +238,62 @@ const TeacherManagement = () => {
   const handleActivate = async (id) => {
     setLoadingId(id);
     try {
-      await axios.put(`${API}/teachers/${id}/activate`, {}, { headers: authHeaders() });
+      await axios.put(`${API}/users/${id}/activate`, {}, { headers: authHeaders() });
       setTeachers(prev => prev.map(t => t.id === id ? { ...t, is_active: true } : t));
     } catch (e) { console.error(e); } finally { setLoadingId(null); }
   };
 
   const handleHardDelete = async (id) => {
-    if (!window.confirm('Permanently delete this teacher? Cannot be undone.')) return;
+    if (!window.confirm('Permanently delete this teacher?')) return;
     setLoadingId(id);
     try {
-      await axios.delete(`${API}/teachers/${id}/delete`, { headers: authHeaders() });
+      await axios.delete(`${API}/users/${id}`, { headers: authHeaders() });
       setTeachers(prev => prev.filter(t => t.id !== id));
       setSelectedId(null);
-    } catch (e) { console.error(e.response?.data || e.message); alert('Failed to delete teacher.'); }
-    finally { setLoadingId(null); }
+    } catch (e) { alert('Failed to delete teacher.'); } finally { setLoadingId(null); }
   };
 
-  // ── Render: detail view ──
+  const handleBan = async (id) => {
+    const hours = window.prompt('Enter ban duration in hours:', '24');
+    if (!hours) return;
+    setLoadingId(id);
+    try {
+      await axios.put(`${API}/users/${id}/ban`, { hours: parseInt(hours) }, { headers: authHeaders() });
+      setTeachers(prev => prev.map(t => t.id === id ? { ...t, is_active: false } : t));
+    } catch (e) { console.error(e); } finally { setLoadingId(null); }
+  };
+
+  const handleBulkAction = async (action) => {
+    if (!selectedTeachers.length) return;
+    if (!window.confirm(`${action} ${selectedTeachers.length} teachers?`)) return;
+    setLoadingId('bulk');
+    try {
+      await axios.post(`${API}/users/bulk`, { userIds: selectedTeachers, action }, { headers: authHeaders() });
+      fetchTeachers();
+      setSelectedTeachers([]);
+    } catch (e) { console.error(e); } finally { setLoadingId(null); }
+  };
+
+  const toggleSelect = (id) =>
+    setSelectedTeachers(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+
   if (selectedId) return (
     <TeacherDetail
-      teacherId={selectedId}
-      onBack={() => setSelectedId(null)}
-      onEdit={handleEdit}
-      onDeactivate={handleDeactivate}
-      onActivate={handleActivate}
-      onHardDelete={handleHardDelete}
-      isDark={isDark}
-      loadingId={loadingId}
+      teacherId={selectedId} onBack={() => setSelectedId(null)}
+      onEdit={handleEdit} onDeactivate={handleDeactivate}
+      onActivate={handleActivate} onHardDelete={handleHardDelete}
+      onBan={handleBan} isDark={isDark} loadingId={loadingId}
     />
   );
 
-  // ── Render: form ──
   if (showForm) return (
-    <TeacherForm onSubmit={handleSubmit} onCancel={handleCancel} mode={currentTeacher ? 'edit' : 'add'} initialData={currentTeacher} />
+    <TeacherForm
+      onSubmit={handleSubmit} onCancel={handleCancel}
+      mode={currentTeacher ? 'edit' : 'add'}
+      initialData={currentTeacher ?? {}}
+    />
   );
 
-  // ── Render: list ──
   return (
     <div className="space-y-8">
       <div className="text-center mb-8">
@@ -318,50 +308,88 @@ const TeacherManagement = () => {
        
       </div>
 
-      <div className="max-w-md mx-auto">
-        <SearchBar onSearch={t => setSearchTerm(t)} />
+      <div className="flex flex-col md:flex-row items-center justify-center gap-4 max-w-4xl mx-auto">
+        <div className="w-full max-w-md">
+          <SearchBar onSearch={t => setSearchTerm(t)} />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className={`text-sm rounded-xl border p-2.5 outline-none ${isDark ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-600'}`}>
+            <option value="all">All Status</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive Only</option>
+          </select>
+        </div>
       </div>
 
-      <div className="text-center">
-        <button onClick={() => setShowForm(true)}
-          className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-105 hover:shadow-lg ${isDark ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}>
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <button onClick={() => { setCurrentTeacher(null); setShowForm(true); }}
+          className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm hover:scale-105 hover:shadow-lg transition-all ${isDark ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}>
           <Plus className="w-4 h-4" /> Add New Teacher
         </button>
+        {selectedTeachers.length > 0 && (
+          <div className="flex gap-2">
+            <button onClick={() => handleBulkAction('deactivate')} disabled={loadingId === 'bulk'}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs bg-yellow-500 text-white hover:bg-yellow-600 shadow-md">
+              <UserX className="w-3.5 h-3.5" /> Deactivate ({selectedTeachers.length})
+            </button>
+            <button onClick={() => handleBulkAction('delete')} disabled={loadingId === 'bulk'}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs bg-red-500 text-white hover:bg-red-600 shadow-md">
+              <Trash2 className="w-3.5 h-3.5" /> Delete ({selectedTeachers.length})
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
-          <div key={teacher.id} onClick={() => setSelectedId(teacher.id)}
-            className={`group relative rounded-2xl p-5 border cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${!teacher.is_active ? 'opacity-60' : ''} ${isDark ? 'bg-gray-900/40 border-gray-700 hover:border-red-400/50' : 'bg-white border-gray-200 hover:border-red-300 hover:shadow-red-100/50'}`}>
-            <div className="flex items-center gap-3">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-gradient-to-br from-red-500 to-gray-600' : 'bg-gradient-to-br from-red-400 to-red-600'}`}>
-                {teacher.profile_image ? <img src={teacher.profile_image} alt="" className="w-full h-full object-cover rounded-xl" /> : <User className="w-5 h-5 text-white" />}
+          <div key={teacher.id}
+            className={`group relative rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${!teacher.is_active ? 'opacity-60' : ''} ${selectedTeachers.includes(teacher.id) ? 'border-red-500 ring-1 ring-red-500' : (isDark ? 'bg-gray-900/40 border-gray-700' : 'bg-white border-gray-200')}`}>
+
+            <button onClick={e => { e.stopPropagation(); toggleSelect(teacher.id); }}
+              className="absolute top-4 right-4 z-10 p-1 rounded-md">
+              {selectedTeachers.includes(teacher.id)
+                ? <CheckSquare className="w-5 h-5 text-red-500" />
+                : <Square className={`w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />}
+            </button>
+
+            <div onClick={() => setSelectedId(teacher.id)} className="cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-gradient-to-br from-red-500 to-gray-600' : 'bg-gradient-to-br from-red-400 to-red-600'}`}>
+                  {teacher.profile_image
+                    ? <img src={teacher.profile_image} alt="" className="w-full h-full object-cover rounded-xl" />
+                    : <User className="w-5 h-5 text-white" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`font-semibold text-sm truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.first_name} {teacher.last_name}</p>
+                  <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{teacher.email}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 mr-6" />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className={`font-semibold text-sm truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.first_name} {teacher.last_name}</p>
-                <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{teacher.email}</p>
+              <div className="flex gap-1.5 mt-3 flex-wrap">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'}`}>Teacher</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${teacher.is_active
+                  ? (isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-600')
+                  : (isDark ? 'bg-gray-700 text-gray-400'      : 'bg-gray-200 text-gray-500')}`}>
+                  {teacher.is_active ? 'Active' : 'Inactive'}
+                </span>
+                {teacher.profile?.department && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>{teacher.profile.department}</span>
+                )}
               </div>
-              <ChevronRight className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
             </div>
-            <div className="flex gap-1.5 mt-3 flex-wrap">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'}`}>Teacher</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${teacher.is_active ? (isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-600') : (isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')}`}>
-                {teacher.is_active ? 'Active' : 'Inactive'}
-              </span>
-              {teacher.fields?.[0] && (
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>{teacher.fields[0]}</span>
-              )}
-            </div>
+
             <div className="flex gap-1 mt-3 pt-3 border-t border-dashed border-gray-200/50" onClick={e => e.stopPropagation()}>
               <button onClick={() => handleEdit(teacher)} disabled={loadingId === teacher.id} title="Edit"
-                className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${isDark ? 'text-blue-400 hover:bg-blue-400/10' : 'text-blue-500 hover:bg-blue-50'}`}><Edit className="w-3.5 h-3.5" /></button>
+                className={`p-1.5 rounded-lg ${isDark ? 'text-blue-400 hover:bg-blue-400/10' : 'text-blue-500 hover:bg-blue-50'}`}><Edit className="w-3.5 h-3.5" /></button>
               {teacher.is_active
                 ? <button onClick={() => handleDeactivate(teacher.id)} disabled={loadingId === teacher.id} title="Deactivate"
-                    className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${isDark ? 'text-yellow-400 hover:bg-yellow-400/10' : 'text-yellow-500 hover:bg-yellow-50'}`}><UserX className="w-3.5 h-3.5" /></button>
+                    className={`p-1.5 rounded-lg ${isDark ? 'text-yellow-400 hover:bg-yellow-400/10' : 'text-yellow-500 hover:bg-yellow-50'}`}><UserX className="w-3.5 h-3.5" /></button>
                 : <button onClick={() => handleActivate(teacher.id)} disabled={loadingId === teacher.id} title="Activate"
-                    className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${isDark ? 'text-green-400 hover:bg-green-400/10' : 'text-green-500 hover:bg-green-50'}`}><UserCheck className="w-3.5 h-3.5" /></button>}
-              <button onClick={() => handleHardDelete(teacher.id)} disabled={loadingId === teacher.id} title="Delete permanently"
-                className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${isDark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-500 hover:bg-red-50'}`}><Trash2 className="w-3.5 h-3.5" /></button>
+                    className={`p-1.5 rounded-lg ${isDark ? 'text-green-400 hover:bg-green-400/10' : 'text-green-500 hover:bg-green-50'}`}><UserCheck className="w-3.5 h-3.5" /></button>}
+              <button onClick={() => handleHardDelete(teacher.id)} disabled={loadingId === teacher.id} title="Delete"
+                className={`p-1.5 rounded-lg ${isDark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-500 hover:bg-red-50'}`}><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           </div>
         )) : (

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import './index.css';
 import WelcomeScreen from './Pages/WelcomeScreen';
 import Home from './Pages/Home';
+import ProtectedRoute from './ProtectedRoute';
 import { AnimatePresence } from 'framer-motion';
 import AuthPage from './Components/Auth';
 import StudyDashboard from './Pages/StudyDashboard';
@@ -28,13 +29,23 @@ import MyCourses from './Pages/MyCourses.jsx';
 import AllCoursesStudent from './Pages/AllCoursesStudent.jsx';
 import AllCoursesTeacher from './Pages/AllCoursesTeacher.jsx';
 import AdminManageStudents from './Pages/AdminManageStudents.jsx';
+import StudentSubmissionHistory from './Pages/StudentSubmissionHistory.jsx';
+import TeacherSubmissions from './Pages/TeacherSubmissions.jsx';
 import { ThemeProvider } from "@/context/ThemeContect.jsx";
 import OAuthCallback from './Pages/OAuthCallback.jsx';
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AccessibilityWidget } from "@/Components/AccessibilityWidget";
 import ClassManagement from './Components/ClassManagement';
 import StudentClasses from './Components/StudentClasses';
-import AdminClassManagement from './Components/AdminClassManagement';
+import AdminClassManagement from './Components/Adminclassmanagement.jsx';
+import Assignments from './Pages/student/Assignments.jsx';
+import AssignmentsTeacher from './Pages/teacher/AssignmentsTeacher.jsx';
+import AuthCallback from './Pages/AuthCallback.jsx';
+import CompleteProfile from './Pages/CompleteProfile.jsx';
+import Sessions from './Pages/teacher/Sessions.jsx';
+import MySession from './Pages/student/MySession.jsx';
+import StudentSubmissionDetail from './Pages/Studentsubmissiondetail.jsx';
+import SubmissionDetail from './Pages/Submissiondetail.jsx';
 
 
 function App() {
@@ -53,14 +64,18 @@ function App() {
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/auth" element={<AuthPage />} />
-                <Route path="/auth/oauth-callback" element={<AuthPage />} />
+                <Route path="/auth/oauth-callback" element={<AuthCallback />} />
+                <Route path="/complete-profile" element={<CompleteProfile />} />
+
 
                 {/* ─── Student Dashboard ─────────────────────────────────────── */}
+                <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
                 <Route path="/StudydDashboard" element={<StudyDashboard />}>
                   <Route index element={<StudyOverview />} />
                   <Route path="quizzes" element={<QuizList />} />
                   <Route path="quizzes/:id" element={<QuizView />} />
                   <Route path="quizzes/:id/result" element={<StudentResultPage />} />
+                  <Route path="sessions" element={<MySession />} />
 
                   {/* My Courses + CourseDetails + ContentDetail */}
                   <Route path="courses" element={<MyCourses />} />
@@ -82,7 +97,9 @@ function App() {
                   <Route path="classes" element={<StudentClasses />} />
 
                   <Route path="settings" element={<StudentSettings />} />
-                  <Route path="assignments" element={<PlaceholderPage title="Assignments" description="Track and submit assignments" />} />
+                  <Route path="submissionshistory" element={<StudentSubmissionHistory />} />
+                  <Route path="submissionshistory/:id" element={<StudentSubmissionDetail />} />
+                  <Route path="assignments" element={<Assignments />} />
                   <Route path="schedule" element={<PlaceholderPage title="Schedule" description="Daily and weekly learning schedule" />} />
                   <Route path="progress" element={<PlaceholderPage title="Progress & Analytics" description="Your learning analytics and goals" />} />
                   <Route path="achievements" element={<PlaceholderPage title="Achievements" description="Your badges and certificates" />} />
@@ -96,19 +113,22 @@ function App() {
                     element={<PlaceholderPage title="Page Not Found" description="This section is under development" />}
                   />
                 </Route>
+                </Route>
 
                 {/* ─── Community ─────────────────────────────────────────────── */}
                 <Route path="/community" element={<CommunityDashboard />} />
-
+                <Route element={<ProtectedRoute allowedRoles={["instructor"]} />}>
                 {/* ─── Teacher Dashboard ─────────────────────────────────────── */}
                 <Route path="/teacherdashboard" element={<TeacherDashboard />}>
                   <Route index element={<div />} />
                   <Route path="overview" element={<div />} />
+                  <Route path="sessions" element={<Sessions />} />
                   <Route path="quizzes" element={<ExamsQuizzes />} />
                   <Route path="quizzes/create" element={<CreateQuiz />} />
                   <Route path="quizzes/edit/:id" element={<EditQuiz />} />
+                          <Route path="assignments" element={<AssignmentsTeacher />} />
                   <Route path="settings" element={<TeacherSettings />} />
-
+                  
                   {/* My Courses + CourseDetails + ContentDetail */}
                   <Route path="courses" element={<MyCoursesTeacher />} />
                   <Route path="courses/:courseId" element={<CourseDetails />} />
@@ -128,7 +148,8 @@ function App() {
                   {/* Class Management — Instructor */}
                   <Route path="classes" element={<ClassManagement />} />
 
-                  <Route path="grading" element={<PlaceholderPage title="Grading Center" description="Review and grade submissions" />} />
+                  <Route path="submissions" element={<TeacherSubmissions />} />
+                  <Route path="submissions/:id" element={<SubmissionDetail />} />
                   <Route path="attendance" element={<PlaceholderPage title="Attendance" description="Track student attendance" />} />
                   <Route path="analytics" element={<PlaceholderPage title="Analytics" description="Student performance analytics" />} />
                   <Route path="schedule" element={<PlaceholderPage title="Class Schedule" description="Manage your teaching schedule" />} />
@@ -142,7 +163,9 @@ function App() {
                     element={<PlaceholderPage title="Page Not Found" description="This section is under development" />}
                   />
                 </Route>
+                </Route>
 
+                <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
                 {/* ─── Admin Dashboard ───────────────────────────────────────── */}
                 <Route path="/AdminDashboard" element={<AdminDashboard />}>
                   <Route index element={<AdminDashboard />} />
@@ -169,6 +192,7 @@ function App() {
                     path="*"
                     element={<PlaceholderPage title="Page Not Found" description="This section is under development" />}
                   />
+                </Route>
                 </Route>
 
                 {/* ─── Standalone fallback ───────────────────────────────────── */}

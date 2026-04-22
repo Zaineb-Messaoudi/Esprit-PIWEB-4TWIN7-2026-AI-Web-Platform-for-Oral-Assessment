@@ -12,7 +12,7 @@ const SubtitleEdit = ({ courseId, chapterId, contentId, onSuccess, token }) => {
     const fetchSubtitleContent = async () => {
       try {
         const contentResponse = await axios.get(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -51,7 +51,7 @@ const SubtitleEdit = ({ courseId, chapterId, contentId, onSuccess, token }) => {
       return;
     }
 
-    const url = `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`;
+    const url = `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`;
     console.log('Sending PATCH request to:', url);
 
     try {

@@ -124,7 +124,7 @@ const ContentDetail = () => {
     const fetchContent = async () => {
       try {
         const res = await axios.get(
-          `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+          `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setContent(res.data);
@@ -132,7 +132,7 @@ const ContentDetail = () => {
         // Marquer le contenu comme vu seulement si l'utilisateur est un étudiant
         if (userType === 'student') {
           await axios.post(
-            `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/view/`,
+            `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/view/`,
             {},
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -208,9 +208,9 @@ const ContentDetail = () => {
       return;
     }
     try {
-      console.log('Sending PATCH request to:', `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`);
+      console.log('Sending PATCH request to:', `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`);
       const response = await axios.patchForm(
-        `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+        `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
         { subtitle_file: file },
         {
           headers: {
@@ -224,7 +224,7 @@ const ContentDetail = () => {
       const fetchContent = async () => {
         try {
           const res = await axios.get(
-            `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+            `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
@@ -266,9 +266,9 @@ const ContentDetail = () => {
       return;
     }
     try {
-      console.log('Sending POST request to:', `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/generate-subtitles/`);
+      console.log('Sending POST request to:', `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/generate-subtitles/`);
       const response = await axios.post(
-        `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/generate-subtitles/`,
+        `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/generate-subtitles/`,
         {},
         {
           headers: {
@@ -282,7 +282,7 @@ const ContentDetail = () => {
       const fetchContent = async () => {
         try {
           const res = await axios.get(
-            `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+            `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
@@ -327,7 +327,7 @@ const ContentDetail = () => {
         }
       }
       await axios.patchForm(
-        `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+        `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
         { subtitle_file: '' },
         {
           headers: {
@@ -368,7 +368,7 @@ const ContentDetail = () => {
   const handleUpdateAltText = async () => {
     try {
       const res = await axios.patch(
-        `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
+        `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/`,
         { image_alt_text: altText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -386,7 +386,7 @@ const ContentDetail = () => {
     try {
       console.log('Generating the alt text with the token:', token);
       const res = await axios.post(
-        `http://127.0.0.1:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/generate-alt-text/`,
+        `http://localhost:3000/courses/${courseId}/chapters/${chapterId}/contents/${contentId}/generate-alt-text/`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

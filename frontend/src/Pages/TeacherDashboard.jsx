@@ -21,6 +21,7 @@ import {
   Award, PieChart, Mail, Star, Plus, Edit, Eye,
   Sun, Moon,
   Layers,
+  Target,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import TeacherSettings from '../Components/TeacherSettings';
@@ -199,12 +200,12 @@ const TeacherDashboard = () => {
 
   const menuItems = [
     { id: 'overview',       label: 'Dashboard',         icon: Home,          description: 'Overview of your teaching activities',    path: '/teacherdashboard'              },
-    { id: 'all-courses',    label: 'All Courses',        icon: GraduationCap, description: 'Explore all courses on the platform',     path: '/teacherdashboard/all-courses'  },
-    { id: 'courses',        label: 'My Courses',         icon: BookOpen,      description: 'Manage your courses and curriculum',      path: '/teacherdashboard/courses'      },
     { id: 'quizzes',        label: 'Quizzes',            icon: ClipboardList, description: 'Create and manage assignments',           path: '/teacherdashboard/quizzes'      },
+        { id: 'assignments', label: 'Assignments', icon: Target, description: 'Manage audio/video assignments', path: '/teacherdashboard/assignments' },
     // ─── Class Management ──────────────────────────────────────────────────────
-    { id: 'classes',        label: 'Class Management',   icon: Layers,        description: 'Manage your classes and student lists',   path: '/teacherdashboard/classes'      },
-    { id: 'grading',        label: 'Grading Center',     icon: FileText,      description: 'Review and grade submissions',            path: '/teacherdashboard/grading'      },
+    { id: 'classes',        label: 'My Classes',   icon: Layers,        description: 'Manage your classes and student lists',   path: '/teacherdashboard/classes/'      },
+    { id: 'sessions',       label: 'Live Sessions', icon: Video,        description: 'Run oral recording sessions',             path: '/teacherdashboard/sessions' },
+    { id: 'submissions', label: 'Submissions', icon: FileText, description: 'Review submissions and find missing work', path: '/teacherdashboard/submissions' },
     { id: 'attendance',     label: 'Attendance',         icon: UserCheck,     description: 'Track student attendance',                path: '/teacherdashboard/attendance'   },
     { id: 'analytics',      label: 'Analytics',          icon: BarChart3,     description: 'Student performance analytics',           path: '/teacherdashboard/analytics'    },
     { id: 'schedule',       label: 'Class Schedule',     icon: Calendar,      description: 'Manage your teaching schedule',           path: '/teacherdashboard/schedule'     },

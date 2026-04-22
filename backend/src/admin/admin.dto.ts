@@ -4,7 +4,16 @@ import {
   IsString,
   IsDateString,
   IsEnum,
+  IsInt,
+  Min,
+  Max,
+  IsArray,
+  ArrayNotEmpty,
+  IsMongoId,
+  IsIn,
+  MinLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { StudentLevel } from '../users/entities/student-profile.entity';
 
 export class UpdateStudentDto {
@@ -32,7 +41,6 @@ export class UpdateStudentDto {
   @IsDateString()
   dateOfBirth?: string;
 
-  // Student profile fields
   @IsOptional()
   @IsEnum(StudentLevel)
   level?: StudentLevel;
@@ -42,6 +50,10 @@ export class UpdateStudentDto {
   major?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
   enrollmentYear?: number;
 }
 
@@ -70,7 +82,6 @@ export class UpdateTeacherDto {
   @IsDateString()
   dateOfBirth?: string;
 
-  // Instructor profile fields
   @IsOptional()
   @IsString()
   department?: string;
@@ -88,6 +99,7 @@ export class CreateTeacherDto {
   email!: string;
 
   @IsString()
+  @MinLength(6)
   password!: string;
 
   @IsString()
@@ -106,11 +118,36 @@ export class CreateTeacherDto {
   @IsString()
   cin?: string;
 
-  // Instructor profile
   @IsString()
   department!: string;
 
   @IsOptional()
   @IsString()
   bio?: string;
+}
+
+export class BanUserDto {
+  @IsInt()
+  @Min(1)
+  @Max(720)
+  duration!: number;
+
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class BulkActionDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsMongoId({ each: true })
+  userIds!: string[];
+
+  @IsString()
+  @IsIn(['activate', 'deactivate', 'delete', 'ban'])
+  action!: string;
+
+  @IsOptional()
+  @IsInt()
+  duration?: number;
 }

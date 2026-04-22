@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -22,9 +23,9 @@ import {
   UpdateStudentDto,
   UpdateTeacherDto,
   CreateTeacherDto,
+  BulkActionDto,
 } from './admin.dto';
 
-// Typed lean results to avoid unsafe `any`
 type LeanUser = Omit<User, '_id'> & { _id: Types.ObjectId };
 type LeanStudentProfile = Omit<StudentProfile, '_id'> & {
   _id: Types.ObjectId;
@@ -46,75 +47,102 @@ export class AdminService {
     private readonly auditService: AuditService,
   ) {}
 
-  // ─── Students ──────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // USERS CORE
+  // ─────────────────────────────────────────────
 
-  async getAllStudents() {
-    const users = await this.userModel
-      .find({ role: UserRole.STUDENT })
-      .lean<LeanUser[]>();
-
-    const userIds = users.map((u) => u._id);
-    const profiles = await this.studentProfileModel
-      .find({ userId: { $in: userIds } })
-      .lean<LeanStudentProfile[]>();
-
-    const profileMap = new Map<string, LeanStudentProfile>(
-      profiles.map((p) => [p.userId.toString(), p]),
-    );
-
-    return users.map((user) => {
-      const profile = profileMap.get(user._id.toString()) ?? null;
-      return {
-        id: user._id.toString(),
-        first_name: user.firstName,
-        last_name: user.lastName,
-        email: user.email,
-        is_active: user.isActive,
-        // minimal fields for card display only
-        profile_image: user.profileImage ?? null,
-        fields: profile
-          ? [profile.major, profile.level, String(profile.enrollmentYear)]
-          : [],
-      };
-    });
+  async getAllUsers() {
+    return this.userModel.find().lean();
   }
 
-  async getStudentDetail(id: string) {
+  async getUserDetail(id: string) {
     const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.STUDENT) {
-      throw new NotFoundException('Student not found');
-    }
+    if (!user) throw new NotFoundException('User not found');
 
-    const [profile, activityLog] = await Promise.all([
-      this.studentProfileModel
-        .findOne({ userId: user._id })
-        .lean<LeanStudentProfile>(),
-      this.auditService.getLog(id),
-    ]);
+    const profile =
+      user.role === UserRole.STUDENT
+        ? await this.studentProfileModel.findOne({ userId: user._id }).lean()
+        : await this.instructorProfileModel
+            .findOne({ userId: user._id })
+            .lean();
+
+    const activity_log = await this.auditService.getLog(id);
 
     return {
       id: user._id.toString(),
       first_name: user.firstName,
       last_name: user.lastName,
       email: user.email,
-      cin: user.cin ?? null,
       phone_num: user.phone,
+      cin: user.cin ?? null,
       birth_date: user.dateOfBirth,
+      role: user.role,
       is_active: user.isActive,
       is_email_verified: user.isEmailVerified,
       profile_image: user.profileImage ?? null,
-      oauth_providers: user.oauthProviders ?? [],
-      fields: profile
-        ? [profile.major, profile.level, String(profile.enrollmentYear)]
-        : [],
-      profile: profile
-        ? {
-            level: profile.level,
-            major: profile.major,
-            enrollmentYear: profile.enrollmentYear,
-          }
-        : null,
-      activity_log: activityLog,
+      profile,
+      activity_log,
+    };
+  }
+
+  // ─────────────────────────────────────────────
+  // STUDENTS
+  // ─────────────────────────────────────────────
+
+  async getAllStudents() {
+    const users = await this.userModel
+      .find({ role: UserRole.STUDENT })
+      .lean<LeanUser[]>();
+
+    const profiles = await this.studentProfileModel
+      .find({ userId: { $in: users.map((u) => u._id) } })
+      .lean<LeanStudentProfile[]>();
+
+    const map = new Map(profiles.map((p) => [p.userId.toString(), p]));
+
+    return users.map((u) => ({
+      id: u._id.toString(),
+      first_name: u.firstName,
+      last_name: u.lastName,
+      email: u.email,
+      phone_num: u.phone,
+      cin: u.cin ?? null,
+      birth_date: u.dateOfBirth,
+      is_active: u.isActive,
+      profile_image: u.profileImage ?? null,
+      profile: map.get(u._id.toString()) ?? null,
+    }));
+  }
+
+  // ✅ FIX: Previously returned raw Mongoose document — the frontend detail
+  // view got an object with Mongoose internals ($__, $isNew, etc.) instead
+  // of plain fields, so first_name/email/activity_log were all undefined.
+  async getStudentDetail(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user || user.role !== UserRole.STUDENT) {
+      throw new NotFoundException('Student not found');
+    }
+
+    const profile = await this.studentProfileModel
+      .findOne({ userId: user._id })
+      .lean();
+
+    const activity_log = await this.auditService.getLog(id);
+
+    return {
+      id: user._id.toString(),
+      first_name: user.firstName,
+      last_name: user.lastName,
+      email: user.email,
+      phone_num: user.phone,
+      cin: user.cin ?? null,
+      birth_date: user.dateOfBirth,
+      role: user.role,
+      is_active: user.isActive,
+      is_email_verified: user.isEmailVerified,
+      profile_image: user.profileImage ?? null,
+      profile,
+      activity_log,
     };
   }
 
@@ -124,165 +152,83 @@ export class AdminService {
       throw new NotFoundException('Student not found');
     }
 
-    const { level, major, enrollmentYear, ...userFields } = dto;
+    Object.assign(user, {
+      firstName: dto.firstName ?? user.firstName,
+      lastName: dto.lastName ?? user.lastName,
+      email: dto.email ?? user.email,
+      phone: dto.phone ?? user.phone,
+      cin: dto.cin ?? user.cin,
+      dateOfBirth: dto.dateOfBirth
+        ? new Date(dto.dateOfBirth)
+        : user.dateOfBirth,
+    });
 
-    if (userFields.firstName) user.firstName = userFields.firstName;
-    if (userFields.lastName) user.lastName = userFields.lastName;
-    if (userFields.email) user.email = userFields.email;
-    if (userFields.phone) user.phone = userFields.phone;
-    if (userFields.cin !== undefined) user.cin = userFields.cin;
-    if (userFields.dateOfBirth)
-      user.dateOfBirth = new Date(userFields.dateOfBirth);
     await user.save();
 
-    if (level ?? major ?? enrollmentYear) {
+    if (dto.level || dto.major || dto.enrollmentYear) {
+      // ✅ upsert:true handles missing profiles gracefully
       await this.studentProfileModel.findOneAndUpdate(
         { userId: user._id },
         {
-          ...(level && { level }),
-          ...(major && { major }),
-          ...(enrollmentYear && { enrollmentYear }),
+          ...(dto.level && { level: dto.level }),
+          ...(dto.major && { major: dto.major }),
+          ...(dto.enrollmentYear && { enrollmentYear: dto.enrollmentYear }),
         },
-        { new: true },
+        { upsert: true },
       );
     }
 
-    const profile = await this.studentProfileModel
-      .findOne({ userId: user._id })
-      .lean<LeanStudentProfile>();
-
-    return {
-      id: user._id.toString(),
-      first_name: user.firstName,
-      last_name: user.lastName,
-      email: user.email,
-      cin: user.cin ?? null,
-      phone_num: user.phone,
-      birth_date: user.dateOfBirth,
-      is_active: user.isActive,
-      fields: profile
-        ? [profile.major, profile.level, String(profile.enrollmentYear)]
-        : [],
-      profile,
-    };
+    return { message: 'Student updated' };
   }
 
-  async deactivateStudent(id: string) {
-    const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.STUDENT) {
-      throw new NotFoundException('Student not found');
-    }
-    user.isActive = false;
-    await user.save();
-    return { message: 'Student deactivated successfully' };
-  }
-
-  async activateStudent(id: string) {
-    const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.STUDENT) {
-      throw new NotFoundException('Student not found');
-    }
-    user.isActive = true;
-    await user.save();
-    return { message: 'Student activated successfully' };
-  }
-
-  async hardDeleteStudent(id: string) {
-    const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.STUDENT) {
-      throw new NotFoundException('Student not found');
-    }
-    await this.studentProfileModel.deleteOne({ userId: user._id });
-    await this.userModel.deleteOne({ _id: user._id });
-    return { message: 'Student permanently deleted' };
-  }
-
-  // ─── Teachers ──────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // TEACHERS
+  // ─────────────────────────────────────────────
 
   async getAllTeachers() {
     const users = await this.userModel
       .find({ role: UserRole.INSTRUCTOR })
       .lean<LeanUser[]>();
 
-    const userIds = users.map((u) => u._id);
     const profiles = await this.instructorProfileModel
-      .find({ userId: { $in: userIds } })
+      .find({ userId: { $in: users.map((u) => u._id) } })
       .lean<LeanInstructorProfile[]>();
 
-    const profileMap = new Map<string, LeanInstructorProfile>(
-      profiles.map((p) => [p.userId.toString(), p]),
-    );
+    const map = new Map(profiles.map((p) => [p.userId.toString(), p]));
 
-    return users.map((user) => {
-      const profile = profileMap.get(user._id.toString()) ?? null;
-      return {
-        id: user._id.toString(),
-        first_name: user.firstName,
-        last_name: user.lastName,
-        email: user.email,
-        is_active: user.isActive,
-        profile_image: user.profileImage ?? null,
-        fields: profile ? [profile.department] : [],
-      };
-    });
-  }
-
-  async getTeacherDetail(id: string) {
-    const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.INSTRUCTOR) {
-      throw new NotFoundException('Teacher not found');
-    }
-
-    const [profile, activityLog] = await Promise.all([
-      this.instructorProfileModel
-        .findOne({ userId: user._id })
-        .lean<LeanInstructorProfile>(),
-      this.auditService.getLog(id),
-    ]);
-
-    return {
-      id: user._id.toString(),
-      first_name: user.firstName,
-      last_name: user.lastName,
-      email: user.email,
-      cin: user.cin ?? null,
-      phone_num: user.phone,
-      birth_date: user.dateOfBirth,
-      is_active: user.isActive,
-      is_email_verified: user.isEmailVerified,
-      profile_image: user.profileImage ?? null,
-      oauth_providers: user.oauthProviders ?? [],
-      fields: profile ? [profile.department] : [],
-      profile: profile
-        ? {
-            department: profile.department,
-            bio: profile.bio ?? null,
-          }
-        : null,
-      activity_log: activityLog,
-    };
+    return users.map((u) => ({
+      id: u._id.toString(),
+      first_name: u.firstName,
+      last_name: u.lastName,
+      email: u.email,
+      phone_num: u.phone,
+      cin: u.cin ?? null,
+      birth_date: u.dateOfBirth,
+      is_active: u.isActive,
+      profile_image: u.profileImage ?? null,
+      profile: map.get(u._id.toString()) ?? null,
+    }));
   }
 
   async createTeacher(dto: CreateTeacherDto) {
     const exists = await this.userModel.findOne({
       $or: [{ email: dto.email }, { username: dto.username }],
     });
-    if (exists) {
-      throw new ConflictException('Email or username already in use');
-    }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    if (exists) throw new ConflictException('User already exists');
+
+    const hashed = await bcrypt.hash(dto.password, 10);
 
     const user = await this.userModel.create({
       username: dto.username,
       email: dto.email,
-      password: hashedPassword,
+      password: hashed,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      role: UserRole.INSTRUCTOR,
       phone: dto.phone,
       dateOfBirth: new Date(dto.dateOfBirth),
       cin: dto.cin,
+      role: UserRole.INSTRUCTOR,
     });
 
     const profile = await this.instructorProfileModel.create({
@@ -296,8 +242,6 @@ export class AdminService {
       first_name: user.firstName,
       last_name: user.lastName,
       email: user.email,
-      is_active: user.isActive,
-      fields: [profile.department],
       profile,
     };
   }
@@ -308,70 +252,134 @@ export class AdminService {
       throw new NotFoundException('Teacher not found');
     }
 
-    const { department, bio, ...userFields } = dto;
+    Object.assign(user, {
+      firstName: dto.firstName ?? user.firstName,
+      lastName: dto.lastName ?? user.lastName,
+      email: dto.email ?? user.email,
+      phone: dto.phone ?? user.phone,
+      cin: dto.cin ?? user.cin,
+      dateOfBirth: dto.dateOfBirth
+        ? new Date(dto.dateOfBirth)
+        : user.dateOfBirth,
+    });
 
-    if (userFields.firstName) user.firstName = userFields.firstName;
-    if (userFields.lastName) user.lastName = userFields.lastName;
-    if (userFields.email) user.email = userFields.email;
-    if (userFields.phone) user.phone = userFields.phone;
-    if (userFields.cin !== undefined) user.cin = userFields.cin;
-    if (userFields.dateOfBirth)
-      user.dateOfBirth = new Date(userFields.dateOfBirth);
     await user.save();
 
-    if (department ?? bio !== undefined) {
+    if (dto.department || dto.bio !== undefined) {
       await this.instructorProfileModel.findOneAndUpdate(
         { userId: user._id },
         {
-          ...(department && { department }),
-          ...(bio !== undefined && { bio }),
+          ...(dto.department && { department: dto.department }),
+          ...(dto.bio !== undefined && { bio: dto.bio }),
         },
-        { new: true },
+        { upsert: true },
       );
     }
 
-    const profile = await this.instructorProfileModel
-      .findOne({ userId: user._id })
-      .lean<LeanInstructorProfile>();
-
-    return {
-      id: user._id.toString(),
-      first_name: user.firstName,
-      last_name: user.lastName,
-      email: user.email,
-      is_active: user.isActive,
-      fields: profile ? [profile.department] : [],
-      profile,
-    };
+    return { message: 'Teacher updated' };
   }
 
-  async deactivateTeacher(id: string) {
+  // ─────────────────────────────────────────────
+  // ACTIVATE / DEACTIVATE / BAN
+  // ─────────────────────────────────────────────
+
+  async activateUser(id: string) {
     const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.INSTRUCTOR) {
-      throw new NotFoundException('Teacher not found');
-    }
-    user.isActive = false;
-    await user.save();
-    return { message: 'Teacher deactivated successfully' };
+    if (!user) throw new NotFoundException('User not found');
+    await this.userModel.findByIdAndUpdate(id, {
+      isActive: true,
+      bannedUntil: null,
+    });
+    return { message: 'User activated' };
   }
 
-  async activateTeacher(id: string) {
+  async deactivateUser(id: string) {
     const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.INSTRUCTOR) {
-      throw new NotFoundException('Teacher not found');
-    }
-    user.isActive = true;
-    await user.save();
-    return { message: 'Teacher activated successfully' };
+    if (!user) throw new NotFoundException('User not found');
+    await this.userModel.findByIdAndUpdate(id, { isActive: false });
+    return { message: 'User deactivated' };
   }
 
-  async hardDeleteTeacher(id: string) {
+  async deactivateForPeriod(id: string, hours: number) {
     const user = await this.userModel.findById(id);
-    if (!user || user.role !== UserRole.INSTRUCTOR) {
-      throw new NotFoundException('Teacher not found');
+    if (!user) throw new NotFoundException('User not found');
+    const bannedUntil = new Date();
+    bannedUntil.setHours(bannedUntil.getHours() + hours);
+    await this.userModel.findByIdAndUpdate(id, {
+      isActive: false,
+      bannedUntil,
+    });
+    return { message: 'User temporarily banned' };
+  }
+
+  // ─────────────────────────────────────────────
+  // DELETE
+  // ─────────────────────────────────────────────
+
+  async deleteUser(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    await this.studentProfileModel.deleteOne({ userId: id });
+    await this.instructorProfileModel.deleteOne({ userId: id });
+    await this.userModel.deleteOne({ _id: id });
+    return { message: 'User deleted' };
+  }
+
+  // ─────────────────────────────────────────────
+  // BULK ACTIONS
+  // ─────────────────────────────────────────────
+
+  async bulkUserAction(dto: BulkActionDto) {
+    const { userIds, action, duration } = dto;
+
+    switch (action) {
+      case 'activate':
+        await this.userModel.updateMany(
+          { _id: { $in: userIds } },
+          { isActive: true, bannedUntil: null },
+        );
+        break;
+
+      case 'deactivate':
+        await this.userModel.updateMany(
+          { _id: { $in: userIds } },
+          { isActive: false },
+        );
+        break;
+
+      case 'delete':
+        await this.studentProfileModel.deleteMany({
+          userId: { $in: userIds },
+        });
+        await this.instructorProfileModel.deleteMany({
+          userId: { $in: userIds },
+        });
+        await this.userModel.deleteMany({ _id: { $in: userIds } });
+        break;
+
+      case 'ban': {
+        if (!duration) throw new BadRequestException('duration required');
+        const bannedUntil = new Date();
+        bannedUntil.setHours(bannedUntil.getHours() + duration);
+        await this.userModel.updateMany(
+          { _id: { $in: userIds } },
+          { isActive: false, bannedUntil },
+        );
+        break;
+      }
+
+      default:
+        throw new BadRequestException('Invalid action');
     }
-    await this.instructorProfileModel.deleteOne({ userId: user._id });
-    await this.userModel.deleteOne({ _id: user._id });
-    return { message: 'Teacher permanently deleted' };
+
+    return { message: 'Bulk action completed' };
+  }
+
+  // ─────────────────────────────────────────────
+  // AUDIT
+  // ─────────────────────────────────────────────
+
+  async getUserAudit(id: string) {
+    return this.auditService.getLog(id);
   }
 }

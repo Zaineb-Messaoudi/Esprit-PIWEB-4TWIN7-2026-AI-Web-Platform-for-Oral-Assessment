@@ -22,12 +22,12 @@ import { AuditService } from '../audit/audit.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserDocument, ActivityEventType } from '../users/entities/user.entity';
 import { AuthGuard } from '@nestjs/passport';
+import { UnauthorizedException } from '@nestjs/common';
 
 type AuthenticatedRequest = Request & {
   user: UserDocument;
 };
 
-// Returned by Passport OAuth strategies (google / facebook)
 type GoogleOAuthUser = {
   email: string;
   firstName: string;
@@ -42,11 +42,6 @@ type FacebookOAuthUser = {
   lastName: string;
   picture?: string;
   facebookId: string;
-};
-
-// Used by the complete-profile endpoint where we only need the JWT sub
-type JwtAuthenticatedRequest = Request & {
-  user: { sub: string; username: string; role: string };
 };
 
 @Controller()
@@ -166,59 +161,64 @@ export class AuthController {
     return req.user;
   }
 
-  // ── Complete OAuth Profile ────────────────────────────────────────────────
-  // Called after a new OAuth sign-up — user fills in the missing fields
-  // (role, real name, phone, DOB, optional CIN / face).
-
   @UseGuards(JwtAuthGuard)
   @Patch('api/complete-profile')
   completeProfile(
-    @Req() req: JwtAuthenticatedRequest,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: CompleteProfileDto,
   ) {
-    return this.authService.completeProfile(req.user.sub, dto, req);
+    const userId = (req.user._id as unknown as string).toString();
+    return this.authService.completeProfile(userId, dto, req);
   }
 
   // ── Google OAuth ──────────────────────────────────────────────────────────
 
   @Get('auth/google')
   @UseGuards(AuthGuard('google'))
-  googleLogin() {
-    // Passport redirects to Google — nothing needed here
-  }
+  googleLogin() {}
 
   @Get('auth/google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
     const oauthUser = req.user as GoogleOAuthUser;
 
-    // 1️⃣ Find or create user
-    const user = await this.authService.findOrCreateOAuthUser({
-      email: oauthUser.email,
-      firstName: oauthUser.firstName,
-      lastName: oauthUser.lastName,
-      profileImage: oauthUser.picture,
-      provider: 'google',
-      socialId: oauthUser.googleId,
-    });
+    try {
+      // findOrCreateOAuthUser throws UnauthorizedException if banned/inactive
+      const user = await this.authService.findOrCreateOAuthUser({
+        email: oauthUser.email,
+        firstName: oauthUser.firstName,
+        lastName: oauthUser.lastName,
+        profileImage: oauthUser.picture,
+        provider: 'google',
+        socialId: oauthUser.googleId,
+      });
 
-    // 2️⃣ Generate JWT tokens
-    const { access_token, refresh_token } =
-      this.authService.generateTokens(user);
+      const { access_token, refresh_token } =
+        this.authService.generateTokens(user);
 
-    // 3️⃣ Build query params for redirect
-    const params = new URLSearchParams({
-      access: access_token,
-      refresh: refresh_token,
-    });
+      const params = new URLSearchParams({
+        access: access_token,
+        refresh: refresh_token,
+      });
 
-    if (user.profileIncomplete) {
-      params.set('profile_incomplete', 'true');
+      if (user.profileIncomplete) {
+        params.set('profile_incomplete', 'true');
+      }
+
+      return res.redirect(`${frontendUrl}/auth?${params.toString()}`);
+    } catch (err) {
+      // ✅ banned/inactive account — redirect to login with a clear error
+      // instead of silently issuing tokens
+      const message =
+        err instanceof UnauthorizedException
+          ? err.message
+          : 'Authentication failed';
+
+      return res.redirect(
+        `${frontendUrl}/auth?error=${encodeURIComponent(message)}`,
+      );
     }
-
-    // 4️⃣ Redirect to frontend
-    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-    return res.redirect(`${frontendUrl}/auth?${params.toString()}`);
   }
 
   // ── Facebook OAuth ────────────────────────────────────────────────────────
@@ -230,30 +230,41 @@ export class AuthController {
   @Get('auth/facebook/callback')
   @UseGuards(AuthGuard('facebook'))
   async facebookCallback(@Req() req: Request, @Res() res: Response) {
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
     const oauthUser = req.user as FacebookOAuthUser;
 
-    const user = await this.authService.findOrCreateOAuthUser({
-      email: oauthUser.email,
-      firstName: oauthUser.firstName,
-      lastName: oauthUser.lastName,
-      profileImage: oauthUser.picture,
-      provider: 'facebook',
-      socialId: oauthUser.facebookId,
-    });
+    try {
+      const user = await this.authService.findOrCreateOAuthUser({
+        email: oauthUser.email,
+        firstName: oauthUser.firstName,
+        lastName: oauthUser.lastName,
+        profileImage: oauthUser.picture,
+        provider: 'facebook',
+        socialId: oauthUser.facebookId,
+      });
 
-    const { access_token, refresh_token } =
-      this.authService.generateTokens(user);
+      const { access_token, refresh_token } =
+        this.authService.generateTokens(user);
 
-    const params = new URLSearchParams({
-      access: access_token,
-      refresh: refresh_token,
-    });
+      const params = new URLSearchParams({
+        access: access_token,
+        refresh: refresh_token,
+      });
 
-    if (user.profileIncomplete) {
-      params.set('profile_incomplete', 'true');
+      if (user.profileIncomplete) {
+        params.set('profile_incomplete', 'true');
+      }
+
+      return res.redirect(`${frontendUrl}/auth?${params.toString()}`);
+    } catch (err) {
+      const message =
+        err instanceof UnauthorizedException
+          ? err.message
+          : 'Authentication failed';
+
+      return res.redirect(
+        `${frontendUrl}/auth?error=${encodeURIComponent(message)}`,
+      );
     }
-
-    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-    return res.redirect(`${frontendUrl}/auth?${params.toString()}`);
   }
 }

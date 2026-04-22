@@ -2,8 +2,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User, UserDocument } from '../../users/entities/user.entity'; // adjust path
+import { Model, Types } from 'mongoose';
+import { User, UserDocument } from '../../users/entities/user.entity';
+
+// lean() returns a plain object — User class has no _id, so we extend it
+type LeanUser = User & { _id: Types.ObjectId };
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -16,11 +19,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: { sub: string; username: string; role: string }) {
-    // password is excluded by default (select: false on schema)
-    const user = await this.userModel.findById(payload.sub);
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('User not found or inactive');
+    const user = await this.userModel.findById(payload.sub).lean<LeanUser>();
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
-    return user; // attached to req.user
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is disabled');
+    }
+
+    if (user.banExpiresAt && new Date(user.banExpiresAt) > new Date()) {
+      throw new UnauthorizedException(
+        `Account is temporarily banned until ${new Date(user.banExpiresAt).toISOString()}`,
+      );
+    }
+
+    return {
+      _id: user._id,
+      userId: user._id.toString(),
+      role: user.role,
+    };
   }
 }
