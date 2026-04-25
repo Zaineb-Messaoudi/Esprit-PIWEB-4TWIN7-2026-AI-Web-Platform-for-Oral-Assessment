@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AiAnalysesService } from './ai-analyses.service';
 import { AiAnalysesController } from './ai-analyses.controller';
-import { MongooseModule } from '@nestjs/mongoose';
 import { AIAnalysis, AIAnalysisSchema } from './entities/ai-analysis.entity';
 
 @Module({
@@ -12,5 +12,6 @@ import { AIAnalysis, AIAnalysisSchema } from './entities/ai-analysis.entity';
   ],
   controllers: [AiAnalysesController],
   providers: [AiAnalysesService],
+  exports: [AiAnalysesService],
 })
 export class AiAnalysesModule {}
