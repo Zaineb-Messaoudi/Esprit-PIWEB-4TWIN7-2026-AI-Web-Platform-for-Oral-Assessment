@@ -93,7 +93,7 @@ const Analytics = ({ classId }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const instructorId = localStorage.getItem('userId') || '69c58bf08ea80fb0cd7c2907';
+  const instructorId = localStorage.getItem('userId') || '';
 
   const [classStats,     setClassStats]     = useState(null);
   const [students,       setStudents]       = useState([]);
