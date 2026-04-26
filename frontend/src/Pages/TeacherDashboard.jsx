@@ -96,19 +96,16 @@ const TeacherOverview = () => {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[
-          { icon: Users,        value: '156', label: 'Total Students',    sub: '+12 this month',      subColor: isDark ? 'text-green-400' : 'text-green-600' },
-          { icon: BookOpen,     value: '8',   label: 'Active Courses',    sub: '2 new this semester', subColor: isDark ? 'text-red-400'   : 'text-red-600'   },
-          { icon: ClipboardList,value: '24',  label: 'Pending Reviews',   sub: '6 urgent',            subColor: isDark ? 'text-yellow-400': 'text-yellow-600', iconColor: isDark ? 'text-green-400' : 'text-green-600' },
-          { icon: TrendingUp,   value: '87%', label: 'Avg. Performance',  sub: '+5% improvement',     subColor: isDark ? 'text-green-400' : 'text-green-600', iconColor: isDark ? 'text-yellow-400': 'text-yellow-600' },
+          { icon: Users,        value: '156', label: 'Total Students',   sub: '+12 this month',      subColor: isDark ? 'text-green-400' : 'text-green-600' },
+          { icon: BookOpen,     value: '8',   label: 'Active Courses',   sub: '2 new this semester', subColor: isDark ? 'text-red-400'   : 'text-red-600'   },
+          { icon: ClipboardList,value: '24',  label: 'Pending Reviews',  sub: '6 urgent',            subColor: isDark ? 'text-yellow-400': 'text-yellow-600', iconColor: isDark ? 'text-green-400' : 'text-green-600' },
+          { icon: TrendingUp,   value: '87%', label: 'Avg. Performance', sub: '+5% improvement',     subColor: isDark ? 'text-green-400' : 'text-green-600', iconColor: isDark ? 'text-yellow-400': 'text-yellow-600' },
         ].map(({ icon: Icon, value, label, sub, subColor, iconColor }, i) => (
-          <div
-            key={i}
-            className={`backdrop-blur-md rounded-xl p-6 border hover:scale-105 transition-all duration-300 ${
-              isDark
-                ? 'bg-white/10 border-white/20 hover:bg-white/20'
-                : 'bg-white/80 border-gray-300 hover:bg-white shadow-lg'
-            }`}
-          >
+          <div key={i} className={`backdrop-blur-md rounded-xl p-6 border hover:scale-105 transition-all duration-300 ${
+            isDark
+              ? 'bg-white/10 border-white/20 hover:bg-white/20'
+              : 'bg-white/80 border-gray-300 hover:bg-white shadow-lg'
+          }`}>
             <div className="flex items-center justify-between mb-4">
               <Icon className={`w-8 h-8 ${iconColor || (isDark ? 'text-red-400' : 'text-red-600')}`} />
               <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</span>
@@ -134,12 +131,9 @@ const TeacherOverview = () => {
               { title: 'Physics Lab Session',  sub: 'Lab 3 · 20 students',    time: '14:00' },
               { title: 'Office Hours',         sub: 'Room 105 · Open',        time: '16:00' },
             ].map(({ title, sub, time }, i) => (
-              <div
-                key={i}
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  isDark ? 'bg-red-500/20' : 'bg-red-50'
-                }`}
-              >
+              <div key={i} className={`flex items-center justify-between p-3 rounded-lg ${
+                isDark ? 'bg-red-500/20' : 'bg-red-50'
+              }`}>
                 <div>
                   <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</p>
                   <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{sub}</p>
@@ -159,9 +153,9 @@ const TeacherOverview = () => {
           </h3>
           <div className="space-y-3">
             {[
-              { text: 'New assignment submitted by John Doe',                         time: '2 minutes ago' },
-              { text: 'Quiz "Quantum Mechanics" completed by 25 students',            time: '1 hour ago'    },
-              { text: 'New forum discussion started in "General Physics"',            time: '3 hours ago'   },
+              { text: 'New assignment submitted by John Doe',              time: '2 minutes ago' },
+              { text: 'Quiz "Quantum Mechanics" completed by 25 students', time: '1 hour ago'    },
+              { text: 'New forum discussion started in "General Physics"', time: '3 hours ago'   },
             ].map(({ text, time }, i) => (
               <div key={i} className="flex items-start space-x-3">
                 <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${isDark ? 'bg-red-400' : 'bg-red-500'}`}></div>
@@ -199,22 +193,22 @@ const TeacherDashboard = () => {
   const isDark = theme === 'dark';
 
   const menuItems = [
-    { id: 'overview',       label: 'Dashboard',         icon: Home,          description: 'Overview of your teaching activities',    path: '/teacherdashboard'              },
-    { id: 'quizzes',        label: 'Quizzes',            icon: ClipboardList, description: 'Create and manage assignments',           path: '/teacherdashboard/quizzes'      },
-        { id: 'assignments', label: 'Assignments', icon: Target, description: 'Manage audio/video assignments', path: '/teacherdashboard/assignments' },
-    // ─── Class Management ──────────────────────────────────────────────────────
-    { id: 'classes',        label: 'My Classes',   icon: Layers,        description: 'Manage your classes and student lists',   path: '/teacherdashboard/classes/'      },
-    { id: 'sessions',       label: 'Live Sessions', icon: Video,        description: 'Run oral recording sessions',             path: '/teacherdashboard/sessions' },
-    { id: 'submissions', label: 'Submissions', icon: FileText, description: 'Review submissions and find missing work', path: '/teacherdashboard/submissions' },
-    { id: 'attendance',     label: 'Attendance',         icon: UserCheck,     description: 'Track student attendance',                path: '/teacherdashboard/attendance'   },
-    { id: 'analytics',      label: 'Analytics',          icon: BarChart3,     description: 'Student performance analytics',           path: '/teacherdashboard/analytics'    },
-    { id: 'schedule',       label: 'Class Schedule',     icon: Calendar,      description: 'Manage your teaching schedule',           path: '/teacherdashboard/schedule'     },
-    { id: 'content',        label: 'Content Library',    icon: Library,       description: 'Course materials and resources',          path: '/teacherdashboard/content'      },
-    { id: 'live_classes',   label: 'Live Classes',       icon: Video,         description: 'Conduct virtual classes',                 path: '/teacherdashboard/live_classes' },
-    { id: 'forums',         label: 'Discussion Forums',  icon: MessageSquare, description: 'Moderate class discussions',              path: '/teacherdashboard/forums'       },
-    { id: 'notifications',  label: 'Notifications',      icon: Bell,          description: 'System alerts and updates',               path: '/teacherdashboard/notifications'},
-    { id: 'support',        label: 'Support',            icon: HelpCircle,    description: 'Get help and report issues',              path: '/teacherdashboard/support'      },
-    { id: 'settings',       label: 'Settings',           icon: Settings,      description: 'Configure your preferences',             path: '/teacherdashboard/settings'     },
+    { id: 'overview',      label: 'Dashboard',          icon: Home,          description: 'Overview of your teaching activities',    path: '/teacherdashboard'               },
+    { id: 'quizzes',       label: 'Quizzes',             icon: ClipboardList, description: 'Create and manage assignments',           path: '/teacherdashboard/quizzes'       },
+    { id: 'assignments',   label: 'Assignments',         icon: Target,        description: 'Manage audio/video assignments',          path: '/teacherdashboard/assignments'   },
+    { id: 'classes',       label: 'My Classes',          icon: Layers,        description: 'Manage your classes and student lists',   path: '/teacherdashboard/classes/'      },
+    { id: 'sessions',      label: 'Live Sessions',       icon: Video,         description: 'Run oral recording sessions',             path: '/teacherdashboard/sessions'      },
+    { id: 'submissions',   label: 'Submissions',         icon: FileText,      description: 'Review submissions and find missing work',path: '/teacherdashboard/submissions'   },
+    { id: 'attendance',    label: 'Attendance',          icon: UserCheck,     description: 'Track student attendance',                path: '/teacherdashboard/attendance'    },
+    // ─── Analytics (now renders your Analytics component) ─────────────────────
+    { id: 'analytics',     label: 'Analytics',           icon: BarChart3,     description: 'Student performance analytics',           path: '/teacherdashboard/analytics'     },
+    { id: 'schedule',      label: 'Class Schedule',      icon: Calendar,      description: 'Manage your teaching schedule',           path: '/teacherdashboard/schedule'      },
+    { id: 'content',       label: 'Content Library',     icon: Library,       description: 'Course materials and resources',          path: '/teacherdashboard/content'       },
+    { id: 'live_classes',  label: 'Live Classes',        icon: Video,         description: 'Conduct virtual classes',                 path: '/teacherdashboard/live_classes'  },
+    { id: 'forums',        label: 'Discussion Forums',   icon: MessageSquare, description: 'Moderate class discussions',              path: '/teacherdashboard/forums'        },
+    { id: 'notifications', label: 'Notifications',       icon: Bell,          description: 'System alerts and updates',               path: '/teacherdashboard/notifications' },
+    { id: 'support',       label: 'Support',             icon: HelpCircle,    description: 'Get help and report issues',              path: '/teacherdashboard/support'       },
+    { id: 'settings',      label: 'Settings',            icon: Settings,      description: 'Configure your preferences',             path: '/teacherdashboard/settings'      },
   ];
 
   return (
@@ -239,7 +233,6 @@ const TeacherDashboard = () => {
           }`}>
             {!sidebarCollapsed ? (
               <div className="flex items-center justify-between w-full">
-                {/* Logo */}
                 <div className="flex items-center">
                   <GraduationCap className={`w-8 h-8 mr-2 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
                   <h1 className={`text-xl font-bold bg-clip-text text-transparent ${
@@ -250,8 +243,6 @@ const TeacherDashboard = () => {
                     TeacherHub
                   </h1>
                 </div>
-
-                {/* Right buttons */}
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={toggleTheme}
@@ -264,7 +255,6 @@ const TeacherDashboard = () => {
                   >
                     {isDark ? <Sun size={20} /> : <Moon size={20} />}
                   </button>
-
                   <button
                     onClick={() => setSidebarCollapsed(true)}
                     className={`p-2 rounded-lg transition-all duration-300 hover:scale-105 ${

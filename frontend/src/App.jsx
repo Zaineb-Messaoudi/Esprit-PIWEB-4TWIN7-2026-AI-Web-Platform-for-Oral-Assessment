@@ -46,7 +46,9 @@ import Sessions from './Pages/teacher/Sessions.jsx';
 import MySession from './Pages/student/MySession.jsx';
 import StudentSubmissionDetail from './Pages/Studentsubmissiondetail.jsx';
 import SubmissionDetail from './Pages/Submissiondetail.jsx';
-
+import FeedbackReport from './Components/FeedbackReport';
+import StudentReport  from './Components/StudentReport';
+import Analytics      from './Components/Analytics';
 
 function App() {
   const isOAuthCallback = window.location.pathname === '/auth/oauth-callback';
@@ -126,7 +128,7 @@ function App() {
                   <Route path="quizzes" element={<ExamsQuizzes />} />
                   <Route path="quizzes/create" element={<CreateQuiz />} />
                   <Route path="quizzes/edit/:id" element={<EditQuiz />} />
-                          <Route path="assignments" element={<AssignmentsTeacher />} />
+                  <Route path="assignments" element={<AssignmentsTeacher />} />
                   <Route path="settings" element={<TeacherSettings />} />
                   
                   {/* My Courses + CourseDetails + ContentDetail */}
@@ -151,7 +153,7 @@ function App() {
                   <Route path="submissions" element={<TeacherSubmissions />} />
                   <Route path="submissions/:id" element={<SubmissionDetail />} />
                   <Route path="attendance" element={<PlaceholderPage title="Attendance" description="Track student attendance" />} />
-                  <Route path="analytics" element={<PlaceholderPage title="Analytics" description="Student performance analytics" />} />
+                  <Route path="analytics" element={<Analytics />} />
                   <Route path="schedule" element={<PlaceholderPage title="Class Schedule" description="Manage your teaching schedule" />} />
                   <Route path="content" element={<PlaceholderPage title="Content Library" description="Course materials and resources" />} />
                   <Route path="live_classes" element={<PlaceholderPage title="Live Classes" description="Conduct virtual classes" />} />
