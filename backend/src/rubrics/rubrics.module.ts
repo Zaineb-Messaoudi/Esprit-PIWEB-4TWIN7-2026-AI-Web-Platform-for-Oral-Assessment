@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Rubric, RubricSchema } from './entities/rubric.entity';
 import { RubricsService } from './rubrics.service';
 import { RubricsController } from './rubrics.controller';
-import { Rubric, RubricSchema } from './entities/rubric.entity';
-import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
@@ -10,5 +10,6 @@ import { MongooseModule } from '@nestjs/mongoose';
   ],
   controllers: [RubricsController],
   providers: [RubricsService],
+  exports: [RubricsService],
 })
 export class RubricsModule {}

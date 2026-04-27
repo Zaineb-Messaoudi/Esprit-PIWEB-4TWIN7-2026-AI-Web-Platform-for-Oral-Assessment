@@ -22,6 +22,7 @@ import {
   Sun, Moon,
   Layers,
   Target,
+  LayoutList,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import TeacherSettings from '../Components/TeacherSettings';
@@ -202,6 +203,7 @@ const TeacherDashboard = () => {
     { id: 'overview',       label: 'Dashboard',         icon: Home,          description: 'Overview of your teaching activities',    path: '/teacherdashboard'              },
     { id: 'quizzes',        label: 'Quizzes',            icon: ClipboardList, description: 'Create and manage assignments',           path: '/teacherdashboard/quizzes'      },
         { id: 'assignments', label: 'Assignments', icon: Target, description: 'Manage audio/video assignments', path: '/teacherdashboard/assignments' },
+        { id: 'rubrics',        label: 'Rubrics',            icon: LayoutList,    description: 'Manage evaluation rubrics',               path: '/teacherdashboard/rubrics'     },
     // ─── Class Management ──────────────────────────────────────────────────────
     { id: 'classes',        label: 'My Classes',   icon: Layers,        description: 'Manage your classes and student lists',   path: '/teacherdashboard/classes/'      },
     { id: 'sessions',       label: 'Live Sessions', icon: Video,        description: 'Run oral recording sessions',             path: '/teacherdashboard/sessions' },
