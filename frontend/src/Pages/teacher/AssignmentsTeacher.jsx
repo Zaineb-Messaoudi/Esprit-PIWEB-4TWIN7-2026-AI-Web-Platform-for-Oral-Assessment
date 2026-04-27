@@ -474,7 +474,7 @@ const AssignmentsTeacher = () => {
                             </div>
                             {(sub.audioFileUrl || sub.videoFileUrl) && (
                               <a
-                                href={'http://localhost:3000' + (sub.audioFileUrl || sub.videoFileUrl)}
+                                href={['http://localhost:3000', sub.audioFileUrl || sub.videoFileUrl].join('')}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="flex items-center gap-1 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-all"
