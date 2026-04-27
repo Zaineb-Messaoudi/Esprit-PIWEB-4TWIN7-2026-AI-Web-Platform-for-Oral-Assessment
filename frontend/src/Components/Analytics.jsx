@@ -94,7 +94,6 @@ const Analytics = ({ classId }) => {
   const isDark = theme === 'dark';
 
   const instructorId = localStorage.getItem('userId') || '';
-
   const [classStats,     setClassStats]     = useState(null);
   const [students,       setStudents]       = useState([]);
   const [selectedStudent,setSelectedStudent]= useState('');
