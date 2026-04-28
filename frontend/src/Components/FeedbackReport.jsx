@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import {
   MessageSquare, Brain, Mic, Volume2, Clock, AlertCircle,
   ChevronDown, ChevronUp, Save, RefreshCw, Check, X,
-  Award, Lightbulb,
+  Award, Lightbulb, ClipboardList,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContect.jsx';
 
@@ -70,40 +70,98 @@ const FillerBadge = memo(({ word, count, isDark }) => (
 ));
 FillerBadge.displayName = 'FillerBadge';
 
+// ─── Criterion Row (rubric criterion with progress bar) ───────────────────────
+const CriterionRow = memo(({ criterion, score, isDark }) => {
+  const pct = criterion.maxScore > 0
+    ? Math.min(100, (score / criterion.maxScore) * 100)
+    : 0;
+  const color = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className={`px-4 py-3 rounded-xl border ${
+      isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+    }`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {criterion.name}
+          </p>
+          {criterion.description && (
+            <p className={`text-xs mt-0.5 truncate ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              {criterion.description}
+            </p>
+          )}
+        </div>
+        <span className={`text-sm font-bold ml-4 flex-shrink-0 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          {score ?? '—'} / {criterion.maxScore}
+        </span>
+      </div>
+      {/* Progress bar */}
+      <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-200'}`}>
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+});
+CriterionRow.displayName = 'CriterionRow';
+
 // ─── FeedbackReport (Main) ────────────────────────────────────────────────────
 const FeedbackReport = ({ submissionId, evaluationId }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const [evaluation, setEvaluation] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [evaluation,  setEvaluation]  = useState(null);
+  const [rubric,      setRubric]      = useState(null);
+  const [aiAnalysis,  setAiAnalysis]  = useState(null);
   const [loadingEval, setLoadingEval] = useState(true);
-  const [loadingAI,   setLoadingAI]  = useState(true);
-  const [feedback,    setFeedback]   = useState('');
-  const [editing,     setEditing]    = useState(false);
-  const [saving,      setSaving]     = useState(false);
-  const [message,     setMessage]    = useState('');
-  const [showAI,      setShowAI]     = useState(true);
+  const [loadingAI,   setLoadingAI]   = useState(true);
+  const [feedback,    setFeedback]    = useState('');
+  const [editing,     setEditing]     = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [message,     setMessage]     = useState('');
+  const [showAI,      setShowAI]      = useState(true);
+  const [showRubric,  setShowRubric]  = useState(true);
+
+  const token = localStorage.getItem('token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   const card = `backdrop-blur-md rounded-2xl border transition-colors duration-300 ${
     isDark ? 'bg-white/5 border-white/10' : 'bg-white/80 border-gray-200'
   }`;
 
+  // Load evaluation
   useEffect(() => {
     if (!evaluationId && !submissionId) return;
     const url = evaluationId
       ? `${BASE_URL}/evaluations/${evaluationId}`
       : `${BASE_URL}/evaluations/submission/${submissionId}`;
-    fetch(url)
+    fetch(url, { headers })
       .then(r => r.json())
-      .then(data => { setEvaluation(data); setFeedback(data.writtenFeedback || ''); })
+      .then(data => {
+        setEvaluation(data);
+        setFeedback(data.writtenFeedback || '');
+        // If evaluation has a rubricId, fetch the rubric
+        if (data.rubricId && typeof data.rubricId === 'string') {
+          fetch(`${BASE_URL}/rubrics/${data.rubricId}`, { headers })
+            .then(r => r.json())
+            .then(setRubric)
+            .catch(() => setRubric(null));
+        } else if (data.rubricId && typeof data.rubricId === 'object') {
+          // Already populated
+          setRubric(data.rubricId);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoadingEval(false));
   }, [evaluationId, submissionId]);
 
+  // Load AI analysis
   useEffect(() => {
     if (!submissionId) return;
-    fetch(`${BASE_URL}/ai-analyses/submission/${submissionId}`)
+    fetch(`${BASE_URL}/ai-analyses/submission/${submissionId}`, { headers })
       .then(r => r.json())
       .then(setAiAnalysis)
       .catch(() => setAiAnalysis(null))
@@ -116,7 +174,7 @@ const FeedbackReport = ({ submissionId, evaluationId }) => {
     try {
       const res = await fetch(`${BASE_URL}/evaluations/${evaluation._id}/feedback`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({ writtenFeedback: feedback }),
       });
       if (!res.ok) throw new Error('Failed to save feedback');
@@ -133,7 +191,10 @@ const FeedbackReport = ({ submissionId, evaluationId }) => {
     if (!evaluation?._id) return;
     setSaving(true);
     try {
-      const res = await fetch(`${BASE_URL}/evaluations/${evaluation._id}/submit`, { method: 'PUT' });
+      const res = await fetch(`${BASE_URL}/evaluations/${evaluation._id}/submit`, {
+        method: 'PUT',
+        headers,
+      });
       if (!res.ok) throw new Error('Failed to submit');
       const updated = await res.json();
       setEvaluation(updated);
@@ -201,7 +262,7 @@ const FeedbackReport = ({ submissionId, evaluationId }) => {
         </div>
       )}
 
-      {/* Scores */}
+      {/* Overall Scores */}
       <div className={`${card} p-6`}>
         <h3 className={`text-xs font-bold uppercase tracking-widest mb-5 flex items-center gap-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           <Award className="w-3.5 h-3.5" /> Scores
@@ -210,11 +271,56 @@ const FeedbackReport = ({ submissionId, evaluationId }) => {
           <ScoreRing score={evaluation.overallScore}         label="Overall Score"  color="#ef4444" isDark={isDark} />
           <ScoreRing score={aiAnalysis?.pronunciationScore} label="Pronunciation"  color="#3b82f6" isDark={isDark} />
           <ScoreRing score={aiAnalysis?.confidenceScore}    label="Confidence"     color="#10b981" isDark={isDark} />
-          {evaluation.scores && Object.entries(evaluation.scores).map(([key, val]) => (
-            <ScoreRing key={key} score={Number(val) * 10} label={key} color="#f59e0b" isDark={isDark} />
-          ))}
         </div>
       </div>
+
+      {/* Rubric Criteria — shown only when rubric is loaded */}
+      {rubric && rubric.criteria?.length > 0 && (
+        <div className={card}>
+          <button onClick={() => setShowRubric(p => !p)}
+            className="w-full flex items-center justify-between p-6 text-left">
+            <h3 className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <ClipboardList className="w-3.5 h-3.5" /> Rubric: {rubric.name}
+            </h3>
+            {showRubric
+              ? <ChevronUp className="w-4 h-4 text-gray-400" />
+              : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+
+          {showRubric && (
+            <div className={`px-6 pb-6 space-y-3 border-t ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
+              <div className="pt-4 space-y-3">
+                {rubric.criteria.map((criterion, i) => {
+                  // evaluation.scores is a map like { "clarity": 8, "fluency": 7 }
+                  // try matching by criterion name (lowercase) or by index
+                  const scoreByName = evaluation.scores?.[criterion.name]
+                    ?? evaluation.scores?.[criterion.name.toLowerCase()]
+                    ?? null;
+                  return (
+                    <CriterionRow
+                      key={i}
+                      criterion={criterion}
+                      score={scoreByName}
+                      isDark={isDark}
+                    />
+                  );
+                })}
+              </div>
+              {/* Total */}
+              <div className={`flex items-center justify-between px-4 py-3 rounded-xl border font-bold ${
+                isDark ? 'bg-red-500/10 border-red-500/20 text-white' : 'bg-red-50 border-red-200 text-gray-900'
+              }`}>
+                <span className="text-sm">Total Score</span>
+                <span className="text-sm">
+                  {Object.values(evaluation.scores || {}).reduce((a, b) => a + Number(b), 0)}
+                  {' / '}
+                  {rubric.criteria.reduce((a, c) => a + c.maxScore, 0)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Written Feedback */}
       <div className={`${card} p-6`}>
@@ -276,9 +382,9 @@ const FeedbackReport = ({ submissionId, evaluationId }) => {
           {showAI && (
             <div className={`px-6 pb-6 space-y-5 border-t ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
               <div className="pt-4 space-y-3">
-                <StatRow icon={Mic}     label="Speech Rate"       value={aiAnalysis.speechRate}             unit="wpm"    isDark={isDark} />
-                <StatRow icon={Clock}   label="Pause Frequency"   value={aiAnalysis.pauseFrequency}         unit="pauses" isDark={isDark} />
-                <StatRow icon={Volume2} label="Avg Pause Duration" value={aiAnalysis.pauseDuration?.average} unit="sec"   isDark={isDark} />
+                <StatRow icon={Mic}     label="Speech Rate"        value={aiAnalysis.speechRate}             unit="wpm"    isDark={isDark} />
+                <StatRow icon={Clock}   label="Pause Frequency"    value={aiAnalysis.pauseFrequency}         unit="pauses" isDark={isDark} />
+                <StatRow icon={Volume2} label="Avg Pause Duration"  value={aiAnalysis.pauseDuration?.average} unit="sec"   isDark={isDark} />
               </div>
 
               {aiAnalysis.fillerWords?.length > 0 && (
