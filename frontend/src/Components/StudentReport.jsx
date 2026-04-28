@@ -5,8 +5,7 @@ import {
   ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContect.jsx';
-
-const BASE_URL = 'http://localhost:3000';
+import { api } from '../utils/api';
 
 // ─── Score Ring ───────────────────────────────────────────────────────────────
 const ScoreRing = memo(({ score, label, color, isDark }) => {
@@ -93,8 +92,8 @@ const StudentReport = () => {
   useEffect(() => {
     if (!studentId) return;
     Promise.all([
-      fetch(`${BASE_URL}/evaluations/student/${studentId}`).then(r => r.json()),
-      fetch(`${BASE_URL}/ai-analyses/student/${studentId}/stats`).then(r => r.json()),
+      api.get(`/evaluations/student/${studentId}`).then((response) => response.data),
+      api.get(`/ai-analyses/student/${studentId}/stats`).then((response) => response.data),
     ])
       .then(([evals, st]) => {
         setEvaluations(Array.isArray(evals) ? evals : []);
@@ -265,8 +264,8 @@ const AIAnalysisSection = memo(({ submissionId, isDark, isOpen, onToggle }) => {
 
   useEffect(() => {
     if (!isOpen || loaded) return;
-    fetch(`${BASE_URL}/ai-analyses/submission/${submissionId}`)
-      .then(r => r.json())
+    api.get(`/ai-analyses/submission/${submissionId}`)
+      .then((response) => response.data)
       .then(data => { setAnalysis(data); setLoaded(true); })
       .catch(() => { setAnalysis(null); setLoaded(true); });
   }, [isOpen, submissionId, loaded]);

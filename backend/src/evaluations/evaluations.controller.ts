@@ -1,84 +1,109 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-} from '@nestjs/common';
+import {Body,Controller,Delete,Get,Param,Post,Put,Request,UseGuards,} from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { EvaluationsService } from './evaluations.service';
 import { CreateEvaluationDto } from './dto/create-evaluation.dto';
 import { UpdateEvaluationDto } from './dto/update-evaluation.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
+
+type AuthenticatedRequest = ExpressRequest & {
+  user: {
+    userId: string;
+    role: UserRole;
+  };
+};
 
 @Controller('evaluations')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class EvaluationsController {
   constructor(private readonly evaluationsService: EvaluationsService) {}
 
-  // ─── STATIC ROUTES FIRST (before /:id) ───────────────────────────────────
-
-  // GET /evaluations — get all evaluations (admin)
   @Get()
-  findAll() {
-    return this.evaluationsService.findAll();
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  findAll(@Request() req: AuthenticatedRequest) {
+    return this.evaluationsService.findAll(req.user);
   }
 
-  // POST /evaluations — create a new evaluation
   @Post()
-  create(@Body() dto: CreateEvaluationDto) {
-    return this.evaluationsService.create(dto);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  create(
+    @Body() dto: CreateEvaluationDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.create(dto, req.user);
   }
 
-  // GET /evaluations/submission/:submissionId — get evaluation for a submission
   @Get('submission/:submissionId')
-  findBySubmission(@Param('submissionId') submissionId: string) {
-    return this.evaluationsService.findBySubmission(submissionId);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR, UserRole.STUDENT)
+  findBySubmission(
+    @Param('submissionId') submissionId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.findBySubmission(submissionId, req.user);
   }
 
-  // GET /evaluations/instructor/:instructorId — get all evaluations by instructor
   @Get('instructor/:instructorId')
-  findByInstructor(@Param('instructorId') instructorId: string) {
-    return this.evaluationsService.findByInstructor(instructorId);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  findByInstructor(
+    @Param('instructorId') instructorId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.findByInstructor(instructorId, req.user);
   }
 
-  // GET /evaluations/student/:studentId — get evaluations visible to a student
   @Get('student/:studentId')
-  findByStudent(@Param('studentId') studentId: string) {
-    return this.evaluationsService.findByStudent(studentId);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  findByStudent(
+    @Param('studentId') studentId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.findByStudent(studentId, req.user);
   }
 
-  // ─── DYNAMIC /:id ROUTES LAST ─────────────────────────────────────────────
-
-  // GET /evaluations/:id — get one evaluation by id
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.evaluationsService.findOne(id);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR, UserRole.STUDENT)
+  findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.evaluationsService.findOne(id, req.user);
   }
 
-  // PUT /evaluations/:id — general update (scores, grade, etc.)
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateEvaluationDto) {
-    return this.evaluationsService.update(id, dto);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEvaluationDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.update(id, dto, req.user);
   }
 
-  // PUT /evaluations/:id/feedback — instructor adds or edits written feedback
   @Put(':id/feedback')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   updateFeedback(
     @Param('id') id: string,
     @Body('writtenFeedback') writtenFeedback: string,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.evaluationsService.updateFeedback(id, writtenFeedback);
+    return this.evaluationsService.updateFeedback(
+      id,
+      writtenFeedback,
+      req.user,
+    );
   }
 
-  // PUT /evaluations/:id/submit — instructor submits evaluation (draft → submitted)
   @Put(':id/submit')
-  submitEvaluation(@Param('id') id: string) {
-    return this.evaluationsService.submitEvaluation(id);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  submitEvaluation(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.submitEvaluation(id, req.user);
   }
 
-  // DELETE /evaluations/:id — delete an evaluation
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.evaluationsService.remove(id);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.evaluationsService.remove(id, req.user);
   }
 }

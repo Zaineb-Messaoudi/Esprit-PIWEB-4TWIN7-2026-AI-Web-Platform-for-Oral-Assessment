@@ -1,4 +1,5 @@
 import {
+  ArrayNotEmpty,
   IsNotEmpty,
   IsMongoId,
   IsOptional,
@@ -6,8 +7,31 @@ import {
   IsNumber,
   IsBoolean,
   IsObject,
-  IsEnum,
+  IsIn,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CriterionScoreInputDto {
+  @IsString()
+  @IsNotEmpty()
+  criterionName!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  instructorScore?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  finalScore?: number;
+
+  @IsOptional()
+  @IsString()
+  overrideReason?: string;
+}
 
 export class CreateEvaluationDto {
   @IsNotEmpty()
@@ -16,11 +40,14 @@ export class CreateEvaluationDto {
 
   @IsNotEmpty()
   @IsMongoId()
-  instructorId!: string;
-
-  @IsNotEmpty()
-  @IsMongoId()
   rubricId!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => CriterionScoreInputDto)
+  criterionScores?: CriterionScoreInputDto[];
 
   @IsOptional()
   @IsObject()
@@ -31,6 +58,7 @@ export class CreateEvaluationDto {
   writtenFeedback?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   overallScore?: number;
 
@@ -38,7 +66,8 @@ export class CreateEvaluationDto {
   finalGrade?: number | string;
 
   @IsOptional()
-  @IsEnum(['draft', 'submitted'])
+  @IsString()
+  @IsIn(['draft', 'submitted'])
   status?: string;
 
   @IsOptional()

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContect.jsx';
 import { api } from '../utils/api'
+import FeedbackReport from '../Components/FeedbackReport.jsx';
 
 /* ─── helpers ─────────────────────────────────────────────── */
 const fmtDate = (v) => {
@@ -297,22 +298,23 @@ export default function SubmissionDetail() {
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const { data } = await api.get(`/submissions/${id}`);
-        setSubmission(data);
-        setGrade(data.grade ?? '');
-        setStatus(data.status ?? 'pending');
-      } catch (err) {
-        setError(err.response?.data?.message || 'Could not load submission.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+  const loadSubmission = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get(`/submissions/${id}`);
+      setSubmission(data);
+      setGrade(data.grade ?? '');
+      setStatus(data.status ?? 'pending');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not load submission.');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    void loadSubmission();
+  }, [loadSubmission]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -553,6 +555,15 @@ export default function SubmissionDetail() {
           </section>
         </div>
       </div>
+
+      <section className="space-y-4">
+        <FeedbackReport
+          submissionId={id}
+          onEvaluationSaved={() => {
+            void loadSubmission();
+          }}
+        />
+      </section>
     </div>
   );
 }
