@@ -24,6 +24,7 @@ import { AuthModule } from './auth/auth.module';
     ForumPostsModule,
     EmailNotificationsModule,
     AuthModule,
+  
   ],
   controllers: [AppController],
   providers: [AppService],

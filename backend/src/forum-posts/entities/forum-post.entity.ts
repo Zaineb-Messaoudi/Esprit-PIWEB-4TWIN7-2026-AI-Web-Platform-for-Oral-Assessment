@@ -1,43 +1,41 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document } from 'mongoose';
 
 export type ForumPostDocument = ForumPost & Document;
 
 @Schema({ timestamps: true })
 export class ForumPost {
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-    authorId: Types.ObjectId;
 
-    @Prop({ required: true })
-    title: string;
+  @Prop({ required: true })
+  title!: string;
 
-    @Prop({ required: true })
+  @Prop({ required: true })
+  content!: string;
+
+  @Prop()
+  author!: string;
+
+
+   @Prop({ default: 0 })
+  likes!: number;
+
+  // 💬 comments
+  @Prop({
+    type: [
+      {
+        content: String,
+        author: String,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  })
+  comments!: {
     content: string;
+    author: string;
+    createdAt: Date;
+  }[];
 
-    @Prop({ index: true })
-    category: string;
-
-    @Prop({ default: 0 })
-    upvotes: number;
-
-    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
-    upvotedBy: Types.ObjectId[];
-
-    @Prop({
-        type: [{
-            authorId: { type: Types.ObjectId, ref: 'User' },
-            content: String,
-            createdAt: Date,
-        }],
-        default: [],
-    })
-    replies: { authorId: Types.ObjectId; content: string; createdAt: Date }[];
-
-    @Prop({ default: false })
-    isModerated: boolean;
-
-    @Prop({ default: false })
-    isFlagged: boolean;
 }
 
 export const ForumPostSchema = SchemaFactory.createForClass(ForumPost);

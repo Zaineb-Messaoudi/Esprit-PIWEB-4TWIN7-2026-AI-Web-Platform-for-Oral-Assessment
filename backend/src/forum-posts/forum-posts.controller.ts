@@ -1,34 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
 import { ForumPostsService } from './forum-posts.service';
 import { CreateForumPostDto } from './dto/create-forum-post.dto';
 import { UpdateForumPostDto } from './dto/update-forum-post.dto';
 
-@Controller('forum-posts')
+@Controller('posts')
 export class ForumPostsController {
-  constructor(private readonly forumPostsService: ForumPostsService) {}
+  constructor(private readonly service: ForumPostsService) {}
 
   @Post()
-  create(@Body() createForumPostDto: CreateForumPostDto) {
-    return this.forumPostsService.create(createForumPostDto);
+  create(@Body() dto: CreateForumPostDto) {
+    return this.service.create(dto);
   }
 
   @Get()
   findAll() {
-    return this.forumPostsService.findAll();
+    return this.service.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.forumPostsService.findOne(+id);
+    return this.service.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateForumPostDto: UpdateForumPostDto) {
-    return this.forumPostsService.update(+id, updateForumPostDto);
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateForumPostDto) {
+    return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.forumPostsService.remove(+id);
+  delete(@Param('id') id: string) {
+    return this.service.delete(id);
   }
+
+
+  @Post(':id/like')
+like(@Param('id') id: string) {
+  return this.service.likePost(id);
+}
+
+@Post(':id/comment')
+addComment(
+  @Param('id') id: string,
+  @Body() body: { content: string; author: string }
+) {
+  return this.service.addComment(id, body);
+}
 }

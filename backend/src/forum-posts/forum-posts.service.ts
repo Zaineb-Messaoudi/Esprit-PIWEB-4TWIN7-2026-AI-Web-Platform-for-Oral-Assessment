@@ -1,26 +1,60 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { ForumPost, ForumPostDocument } from './entities/forum-post.entity';
 import { CreateForumPostDto } from './dto/create-forum-post.dto';
 import { UpdateForumPostDto } from './dto/update-forum-post.dto';
 
 @Injectable()
 export class ForumPostsService {
-  create(createForumPostDto: CreateForumPostDto) {
-    return 'This action adds a new forumPost';
+  constructor(
+    @InjectModel(ForumPost.name)
+    private forumPostModel: Model<ForumPostDocument>,
+  ) {}
+
+  async create(dto: CreateForumPostDto) {
+    return this.forumPostModel.create(dto);
   }
 
-  findAll() {
-    return `This action returns all forumPosts`;
+  async findAll() {
+    return this.forumPostModel.find().exec();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} forumPost`;
+  async findOne(id: string) {
+    return this.forumPostModel.findById(id).exec();
   }
 
-  update(id: number, updateForumPostDto: UpdateForumPostDto) {
-    return `This action updates a #${id} forumPost`;
+  async update(id: string, dto: UpdateForumPostDto) {
+    return this.forumPostModel.findByIdAndUpdate(id, dto, { new: true });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} forumPost`;
+  async delete(id: string) {
+    return this.forumPostModel.findByIdAndDelete(id);
   }
+
+
+  // ❤️ LIKE POST
+async likePost(id: string) {
+  return this.forumPostModel.findByIdAndUpdate(
+    id,
+    { $inc: { likes: 1 } },
+    { new: true }
+  );
+}
+
+// 💬 ADD COMMENT
+async addComment(id: string, comment: { content: string; author: string }) {
+  return this.forumPostModel.findByIdAndUpdate(
+    id,
+    {
+      $push: {
+        comments: {
+          ...comment,
+          createdAt: new Date(),
+        },
+      },
+    },
+    { new: true }
+  );
+}
 }
