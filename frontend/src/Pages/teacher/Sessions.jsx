@@ -35,27 +35,35 @@ const StatusBadge = ({ status }) => (
 
 // ─── Live session panel ───────────────────────────────────────────────────────
 
-const LivePanel = ({ sessionId, isDark, onComplete }) => {
-  const [data,          setData]         = useState(null);
-  const [loading,       setLoading]      = useState(true);
-  const [actionLoading, setAL]           = useState(false);
-  const [error,         setError]        = useState('');
-  const [remoteStream,  setRemoteStream] = useState(null);
-  const videoRef = useRef(null);
+const LivePanel = ({ session, mediaType = 'both', isDark, onComplete }) => {
+  const sessionId = session._id;
+
+  const [data,          setData]    = useState(null);
+  const [loading,       setLoading] = useState(true);
+  const [actionLoading, setAL]      = useState(false);
+  const [error,         setError]   = useState('');
+  const videoRef  = useRef(null);
+  const calledRef = useRef(false);
 
   const userId = localStorage.getItem('userId') || '';
 
-  const { connected, recording, cutTurn } = useSessionSocket({
-    sessionId,
-    role: 'instructor',
-    userId,
-    enabled: true,
-    onRemoteStream: (stream) => {
-      setRemoteStream(stream);
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    },
-    onBlobSaved: () => { void load(); },
-  });
+  const { connected, recording, countdown, remoteStream, cutTurn, callStudent } =
+    useSessionSocket({
+      sessionId,
+      role: 'instructor',
+      userId,
+      enabled: true,
+      onRemoteStream: (stream) => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      },
+      onBlobSaved: () => { void load(); },
+    });
+
+  useEffect(() => {
+    if (videoRef.current && remoteStream) {
+      videoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
 
   const load = useCallback(async () => {
     try {
@@ -72,19 +80,32 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    if (videoRef.current && remoteStream) {
-      videoRef.current.srcObject = remoteStream;
+    if (connected && data?.currentStudent && !calledRef.current) {
+      calledRef.current = true;
+      callStudent(
+        data.currentStudent._id.toString(),
+        session.waitTimePerStudent * 60,
+        mediaType,
+      );
     }
-  }, [remoteStream]);
+    if (!connected) calledRef.current = false;
+  }, [connected, data?.currentStudent, callStudent, session.waitTimePerStudent, mediaType]);
+
+  // ── Action handlers ───────────────────────────────────────────────────────
+  // KEY: await cutTurn() before calling any session-mutation API.
+  // cutTurn() resolves only after the blob upload completes, so by the time
+  // nextStudent / skipStudent / completeSession run, the session document is
+  // still in its current state and saveBlobRecording won't get a 404.
 
   const handleNext = async () => {
     if (!data?.currentStudent) return;
     setAL(true);
+    const studentId = data.currentStudent._id.toString();
     try {
-      cutTurn();
-      await nextStudent(sessionId, data.currentStudent._id);
-      setRemoteStream(null);
+      await cutTurn(studentId);        // ← wait for blob upload first
+      await nextStudent(sessionId, studentId);
       await load();
+      calledRef.current = false;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to advance');
     } finally {
@@ -95,11 +116,12 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
   const handleSkip = async () => {
     if (!data?.currentStudent) return;
     setAL(true);
+    const studentId = data.currentStudent._id.toString();
     try {
-      cutTurn();
-      await skipStudent(sessionId, data.currentStudent._id);
-      setRemoteStream(null);
+      await cutTurn(studentId);        // ← wait for blob upload first
+      await skipStudent(sessionId, studentId);
       await load();
+      calledRef.current = false;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to skip');
     } finally {
@@ -110,8 +132,9 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
   const handleComplete = async () => {
     if (!window.confirm('Complete this session?')) return;
     setAL(true);
+    const studentId = data?.currentStudent?._id?.toString();
     try {
-      cutTurn();
+      await cutTurn(studentId);        // ← wait for blob upload first
       await completeSession(sessionId);
       onComplete?.();
     } catch (err) {
@@ -136,6 +159,7 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
 
   const recordedIds = recordedStudents.map((id) => id.toString());
   const skippedIds  = skippedStudents.map((id) => id.toString());
+  const hasVideo    = remoteStream?.getVideoTracks().length > 0;
 
   return (
     <div className="space-y-4">
@@ -147,51 +171,80 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
         </div>
       )}
 
-      {/* Connection + recording status */}
+      {/* Connection + recording indicator */}
       <div className={`flex items-center gap-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-        <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-gray-400'}`} />
-        {connected ? 'Live — waiting for student stream' : 'Connecting...'}
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-400' : 'bg-gray-400'}`} />
+        {connected ? (remoteStream ? 'Student streaming' : 'Live — waiting for student') : 'Connecting...'}
         {recording && (
-          <span className="flex items-center gap-1 text-red-400 font-medium ml-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            Recording
+          <span className="flex items-center gap-1.5 text-red-400 font-semibold ml-auto">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping flex-shrink-0" />
+            REC
+            {countdown > 0 && (
+              <span className={`font-mono tabular-nums ml-1 ${countdown <= 30 ? 'text-red-500' : ''}`}>
+                {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}
+              </span>
+            )}
           </span>
         )}
       </div>
 
-      {/* Live student video / audio preview */}
-      {remoteStream && (
-        <div className={`rounded-xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-          {remoteStream.getVideoTracks().length > 0 ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full max-h-48 object-cover bg-black"
-            />
-          ) : (
-            <div className={`flex items-center justify-center h-20 gap-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
-              <Mic size={20} className="text-red-400 animate-pulse" />
-              <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Audio stream active
-              </span>
+      {/* Live stream preview */}
+      <div className={`rounded-xl overflow-hidden border ${
+        isDark ? 'border-white/10 bg-black' : 'border-gray-200 bg-gray-900'
+      }`} style={{ minHeight: '200px' }}>
+        {remoteStream && hasVideo ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full object-cover"
+            style={{ maxHeight: '240px', display: 'block', background: '#000' }}
+          />
+        ) : remoteStream && !hasVideo ? (
+          <div className="flex flex-col items-center justify-center h-48 gap-4 px-6">
+            <div className="flex items-end gap-1 h-12">
+              {Array.from({ length: 20 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1.5 rounded-full bg-red-400"
+                  style={{
+                    height: `${30 + Math.sin(i * 0.8) * 20}%`,
+                    animation: `wave ${0.4 + (i % 5) * 0.1}s ease-in-out infinite alternate`,
+                    animationDelay: `${i * 0.05}s`,
+                  }}
+                />
+              ))}
             </div>
-          )}
-        </div>
-      )}
+            <p className="text-sm text-gray-400 font-medium flex items-center gap-2">
+              <Mic size={14} className="text-red-400" />
+              Audio stream active
+            </p>
+            <audio ref={videoRef} autoPlay style={{ display: 'none' }} />
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-48 gap-3">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-800 border border-gray-700'
+            }`}>
+              <Video size={28} className="text-gray-500" />
+            </div>
+            <p className="text-sm text-gray-500">
+              {connected ? 'Waiting for student to connect...' : 'Connecting to session...'}
+            </p>
+          </div>
+        )}
+      </div>
 
-      {/* Current student controls */}
+      {/* Current student */}
       {currentStudent ? (
         <div className={`p-4 rounded-xl border-2 border-red-500/40 ${isDark ? 'bg-red-500/10' : 'bg-red-50'}`}>
           <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-            🎙 Current student
+            🎙 Recording
           </p>
           <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {currentStudent.firstName} {currentStudent.lastName}
           </p>
-          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            {currentStudent.email}
-          </p>
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{currentStudent.email}</p>
           <div className="flex gap-2 mt-3 flex-wrap">
             <button
               onClick={handleNext}
@@ -201,8 +254,9 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
               {actionLoading ? <RefreshCw size={14} className="animate-spin" /> : <ChevronRight size={14} />}
               Save & next
             </button>
+            {/* Cut: fire-and-forget — no await needed, onBlobSaved will refresh */}
             <button
-              onClick={cutTurn}
+              onClick={() => cutTurn(data?.currentStudent?._id?.toString())}
               disabled={actionLoading}
               className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
             >
@@ -221,42 +275,35 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
         </div>
       ) : (
         <div className={`p-4 rounded-xl border text-center ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-          <p className={`font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            All students have been recorded.
-          </p>
+          <p className={`font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>All students have been recorded.</p>
         </div>
       )}
 
       {/* Student list */}
-      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
         {students.map((s, i) => {
           const id         = s._id.toString();
           const isRecorded = recordedIds.includes(id);
           const isSkipped  = skippedIds.includes(id);
           const isCurrent  = i === currentStudentIndex;
           return (
-            <div
-              key={id}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors ${
-                isCurrent
-                  ? isDark ? 'bg-red-500/15 border-red-500/30'      : 'bg-red-50 border-red-200'
-                  : isRecorded
-                    ? isDark ? 'bg-green-500/10 border-green-500/20' : 'bg-green-50 border-green-200'
-                    : isSkipped
-                      ? isDark ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-yellow-50 border-yellow-200'
-                      : isDark ? 'bg-white/5 border-white/10'            : 'bg-white border-gray-200'
-              }`}
-            >
-              <span className={`text-xs font-bold w-6 text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                {i + 1}
-              </span>
+            <div key={id} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors ${
+              isCurrent
+                ? isDark ? 'bg-red-500/15 border-red-500/30'       : 'bg-red-50 border-red-200'
+                : isRecorded
+                  ? isDark ? 'bg-green-500/10 border-green-500/20'  : 'bg-green-50 border-green-200'
+                  : isSkipped
+                    ? isDark ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-yellow-50 border-yellow-200'
+                    : isDark ? 'bg-white/5 border-white/10'            : 'bg-white border-gray-200'
+            }`}>
+              <span className={`text-xs font-bold w-6 text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{i + 1}</span>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {s.firstName} {s.lastName}
                 </p>
               </div>
               {isRecorded && <CheckCircle size={16} className="text-green-400 flex-shrink-0" />}
-              {isSkipped   && <SkipForward size={16} className="text-yellow-400 flex-shrink-0" />}
+              {isSkipped   && <SkipForward  size={16} className="text-yellow-400 flex-shrink-0" />}
               {isCurrent   && <span className="text-xs font-bold text-red-400 flex-shrink-0">NOW</span>}
             </div>
           );
@@ -271,6 +318,13 @@ const LivePanel = ({ sessionId, isDark, onComplete }) => {
         <CheckCircle size={16} />
         Complete session
       </button>
+
+      <style>{`
+        @keyframes wave {
+          from { transform: scaleY(0.4); }
+          to   { transform: scaleY(1);   }
+        }
+      `}</style>
     </div>
   );
 };
@@ -300,7 +354,6 @@ const Sessions = () => {
     waitTimePerStudent: 5,
   });
 
-  // ─── Load instructor's classes on mount ──────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -332,11 +385,10 @@ const Sessions = () => {
       const data = await getLiveAssignments(selectedClassId);
       setLiveAssigns(data);
     } catch {
-      // non-fatal — list stays empty
+      // non-fatal
     }
   }, [selectedClassId]);
 
-  // ─── Fetch sessions & live assignments whenever selected class changes ────
   useEffect(() => {
     if (selectedClassId) {
       loadSessions();
@@ -407,12 +459,9 @@ const Sessions = () => {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Live Sessions
-          </h2>
+          <h2 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Live Sessions</h2>
           <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Schedule and run oral presentation sessions for your class.
           </p>
@@ -426,10 +475,8 @@ const Sessions = () => {
         </button>
       </div>
 
-      {/* Class selector bar */}
-      <div className={`flex items-center gap-3 p-4 rounded-xl border ${
-        isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-      }`}>
+      {/* Class selector */}
+      <div className={`flex items-center gap-3 p-4 rounded-xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
         <label className={`text-sm font-medium whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
           Viewing class:
         </label>
@@ -443,9 +490,7 @@ const Sessions = () => {
             <option key={cls._id} value={cls._id}>{cls.name}</option>
           ))}
         </select>
-        {selectedClassId && loading && (
-          <RefreshCw size={16} className="animate-spin text-red-500 ml-1" />
-        )}
+        {selectedClassId && loading && <RefreshCw size={16} className="animate-spin text-red-500 ml-1" />}
       </div>
 
       {/* Alerts */}
@@ -467,79 +512,50 @@ const Sessions = () => {
       {showForm && (
         <div className={`${card} p-6`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Schedule New Session
-            </h3>
+            <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Schedule New Session</h3>
             <button onClick={() => setShowForm(false)}>
               <X size={20} className={isDark ? 'text-gray-400' : 'text-gray-600'} />
             </button>
           </div>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Session title *
-              </label>
-              <input
-                type="text" required value={form.title}
+              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Session title *</label>
+              <input type="text" required value={form.title}
                 onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                className={inputCls} placeholder="e.g. B2 Oral — Group A"
-              />
+                className={inputCls} placeholder="e.g. B2 Oral — Group A" />
             </div>
-
             <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Assignment (Live type) *
-              </label>
-              <select
-                required value={form.assignmentId}
+              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Assignment (Live type) *</label>
+              <select required value={form.assignmentId}
                 onChange={e => setForm(p => ({ ...p, assignmentId: e.target.value }))}
-                className={inputCls}
-              >
+                className={inputCls}>
                 <option value="">— Select a live assignment —</option>
-                {liveAssigns.map(a => (
-                  <option key={a._id} value={a._id}>{a.title}</option>
-                ))}
+                {liveAssigns.map(a => <option key={a._id} value={a._id}>{a.title}</option>)}
               </select>
               {liveAssigns.length === 0 && (
-                <p className="text-xs text-yellow-500 mt-1">
-                  No live assignments found. Create an assignment with type "Live" first.
-                </p>
+                <p className="text-xs text-yellow-500 mt-1">No live assignments found. Create one with type "Live" first.</p>
               )}
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Scheduled date *
-                </label>
-                <input
-                  type="datetime-local" required value={form.scheduledDate}
+                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Scheduled date *</label>
+                <input type="datetime-local" required value={form.scheduledDate}
                   onChange={e => setForm(p => ({ ...p, scheduledDate: e.target.value }))}
-                  className={inputCls}
-                />
+                  className={inputCls} />
               </div>
               <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Wait time per student (min) *
-                </label>
-                <input
-                  type="number" required min="1" max="60"
-                  value={form.waitTimePerStudent}
+                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Wait time per student (min) *</label>
+                <input type="number" required min="1" max="60" value={form.waitTimePerStudent}
                   onChange={e => setForm(p => ({ ...p, waitTimePerStudent: +e.target.value }))}
-                  className={inputCls}
-                />
+                  className={inputCls} />
               </div>
             </div>
-
             <div className="flex gap-3 pt-2">
-              <button type="submit"
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 transition-all">
+              <button type="submit" className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 transition-all">
                 Schedule session
               </button>
               <button type="button" onClick={() => setShowForm(false)}
-                className={`px-6 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                  isDark ? 'border-white/10 text-gray-300 hover:bg-white/5' : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                }`}>
+                className={`px-6 py-2.5 rounded-xl text-sm font-semibold border transition-all ${isDark ? 'border-white/10 text-gray-300 hover:bg-white/5' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
                 Cancel
               </button>
             </div>
@@ -551,25 +567,20 @@ const Sessions = () => {
       {!selectedClassId ? (
         <div className={`${card} p-12 text-center`}>
           <Users className={`w-12 h-12 mx-auto mb-4 opacity-50 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
-          <p className={`font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Select a class above to view its sessions
-          </p>
+          <p className={`font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Select a class above to view its sessions</p>
         </div>
-
       ) : sessions.length === 0 ? (
         <div className={`${card} p-12 text-center`}>
           <Video className={`w-12 h-12 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
           <p className={`font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>No sessions yet</p>
-          <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            Schedule a session to start live oral recordings.
-          </p>
         </div>
-
       ) : (
         <div className="space-y-4">
           {sessions.map(session => {
             const isActive = session.status === 'active';
             const isLive   = activeSession === session._id;
+            const linkedAssign    = liveAssigns.find(a => a._id === session.assignmentId);
+            const sessionMediaType = linkedAssign?.allowedFileTypes ?? 'both';
 
             return (
               <div key={session._id} className={`${card} overflow-hidden`}>
@@ -577,18 +588,13 @@ const Sessions = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                          {session.title}
-                        </h3>
+                        <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{session.title}</h3>
                         <StatusBadge status={session.status} />
                       </div>
                       <div className={`flex items-center flex-wrap gap-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                         <span className="flex items-center gap-1">
                           <Calendar size={14} />
-                          {new Date(session.scheduledDate).toLocaleDateString('en-GB', {
-                            day: '2-digit', month: 'long', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
+                          {new Date(session.scheduledDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock size={14} />
@@ -596,38 +602,23 @@ const Sessions = () => {
                         </span>
                       </div>
                     </div>
-
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {session.status === 'scheduled' && (
-                        <button
-                          onClick={() => handleStart(session)}
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-all"
-                        >
-                          <Play size={14} />
-                          Start
+                        <button onClick={() => handleStart(session)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-all">
+                          <Play size={14} /> Start
                         </button>
                       )}
                       {isActive && (
-                        <button
-                          onClick={() => setActiveSession(isLive ? null : session._id)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            isLive
-                              ? 'bg-red-500 text-white'
-                              : 'bg-green-500 hover:bg-green-600 text-white'
-                          }`}
-                        >
+                        <button onClick={() => setActiveSession(isLive ? null : session._id)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isLive ? 'bg-red-500 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}>
                           <UserCheck size={14} />
                           {isLive ? 'Hide panel' : 'Open live panel'}
                         </button>
                       )}
                       {(session.status === 'scheduled' || session.status === 'active') && (
-                        <button
-                          onClick={() => handleCancel(session)}
-                          title="Cancel session"
-                          className={`p-2 rounded-lg transition-colors ${
-                            isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-50 text-red-500'
-                          }`}
-                        >
+                        <button onClick={() => handleCancel(session)} title="Cancel session"
+                          className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-50 text-red-500'}`}>
                           <Ban size={16} />
                         </button>
                       )}
@@ -638,7 +629,8 @@ const Sessions = () => {
                 {isLive && isActive && (
                   <div className={`border-t px-6 py-5 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
                     <LivePanel
-                      sessionId={session._id}
+                      session={session}
+                      mediaType={sessionMediaType}
                       isDark={isDark}
                       onComplete={() => { setActiveSession(null); loadSessions(); }}
                     />

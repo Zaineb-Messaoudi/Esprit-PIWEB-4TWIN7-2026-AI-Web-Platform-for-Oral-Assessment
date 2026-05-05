@@ -90,7 +90,7 @@ export class SessionsGateway implements OnGatewayDisconnect {
     client.emit('joined', { ok: true });
   }
 
-  // Called by SessionsService after startSession() / nextStudent()
+  // ─── Called by SessionsService after startSession() / nextStudent() ─────────
   notifyStudentTurn(
     sessionId: string,
     studentId: string,
@@ -108,7 +108,11 @@ export class SessionsGateway implements OnGatewayDisconnect {
     }
   }
 
-  // Teacher manually triggers a student's turn from the LivePanel
+  // ─── Teacher manually (re-)triggers a student from the LivePanel ─────────────
+  // Critical: when instructor opens LivePanel their socket connects AFTER
+  // startSession() already fired notifyStudentTurn. The student's offer landed
+  // in an empty room and was lost. Instructor emits call-student → this handler
+  // re-sends your-turn so the student re-opens camera and re-sends the offer.
   @SubscribeMessage('call-student')
   handleCall(
     @MessageBody()
@@ -127,30 +131,40 @@ export class SessionsGateway implements OnGatewayDisconnect {
     );
   }
 
-  // Student → Teacher: SDP offer
+  // ─── Student → Teacher: SDP offer ───────────────────────────────────────────
+  // FIX: forward turnId so the student's stale-answer guard works correctly.
+  // Previously only { offer } was forwarded — turnId was silently dropped,
+  // disabling the "Dropping stale webrtc-answer" protection in the hook.
   @SubscribeMessage('webrtc-offer')
   handleOffer(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { sessionId: string; offer: unknown },
+    @MessageBody() data: { sessionId: string; offer: unknown; turnId: string },
   ): void {
     const tid = this.teachers.get(data.sessionId);
     if (!tid) return;
     this.active.set(data.sessionId, client.id);
-    this.server.to(tid).emit('webrtc-offer', { offer: data.offer });
+    this.server.to(tid).emit('webrtc-offer', {
+      offer: data.offer,
+      turnId: data.turnId,
+    });
   }
 
-  // Teacher → Student: SDP answer
+  // ─── Teacher → Student: SDP answer ──────────────────────────────────────────
+  // FIX: forward turnId so the student can reject answers from a previous turn.
   @SubscribeMessage('webrtc-answer')
   handleAnswer(
-    @MessageBody() data: { sessionId: string; answer: unknown },
+    @MessageBody() data: { sessionId: string; answer: unknown; turnId: string },
   ): void {
     const sid = this.active.get(data.sessionId);
     if (sid) {
-      this.server.to(sid).emit('webrtc-answer', { answer: data.answer });
+      this.server.to(sid).emit('webrtc-answer', {
+        answer: data.answer,
+        turnId: data.turnId,
+      });
     }
   }
 
-  // ICE relay — both directions
+  // ─── ICE relay — both directions ─────────────────────────────────────────────
   @SubscribeMessage('ice-candidate')
   handleIce(
     @ConnectedSocket() client: Socket,
@@ -173,7 +187,7 @@ export class SessionsGateway implements OnGatewayDisconnect {
     }
   }
 
-  // Teacher ends the current student's turn
+  // ─── Teacher ends the current student's turn ─────────────────────────────────
   @SubscribeMessage('end-turn')
   handleEndTurn(@MessageBody() data: { sessionId: string }): void {
     const sid = this.active.get(data.sessionId);

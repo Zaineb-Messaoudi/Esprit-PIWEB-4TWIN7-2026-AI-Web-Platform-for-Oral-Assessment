@@ -33,6 +33,8 @@ import CourseList from '../Components/CourseList';
 import AdminManageStudents from './AdminManageStudents';
 import AdminClassManagement from '../Components/Adminclassmanagement';
 import { useLocation, useNavigate } from 'react-router-dom';
+import Analytics from '../Components/Analytics.jsx';
+import DiscussionForum from '../Components/DiscussionForum.jsx';
 
 const PlaceholderPage = ({ title, description }) => {
   const { theme } = useTheme();
@@ -79,7 +81,7 @@ const PlaceholderPage = ({ title, description }) => {
               isDark
                 ? "bg-gray-800 text-red-400"
                 : "bg-gray-200 text-red-600"
-            }`}>./admin/{title.replace(/\s+/g, '')}</code>
+            }`}>./AdminDashboard/{title.replace(/\s+/g, '')}</code>
           </p>
           <p className={`text-sm ${
             isDark ? "text-gray-400" : "text-gray-500"
@@ -396,22 +398,13 @@ const AdminDashboard = () => {
   };
 
   const menuItems = [
-    { id: 'overview',               label: 'Dashboard',            icon: Home,         description: 'System overview and key metrics',            path: 'overview'               },
+    { id: 'overview',               label: 'Dashboard',             icon: Home,         description: 'System overview and key metrics',            path: 'overview'               },
     { id: 'AdminManagingStudents',   label: 'Student Management',   icon: Users,        description: 'Manage students and teachers',               path: 'AdminManagingStudents'  },
     { id: 'AdminManageTeachers',     label: 'Teacher Management',   icon: UserCheck,    description: 'Approve new teacher registrations',          path: 'AdminManageTeachers'    },
-    { id: 'course_management',       label: 'Course Management',    icon: BookOpen,     description: 'Oversee all courses and content',            path: 'course_management'      },
     // ─── Class Management ────────────────────────────────────────────────────────
     { id: 'classes',                 label: 'Class Management',     icon: Layers,       description: 'Manage all classes and enrollments',         path: 'classes'                },
-    { id: 'institution_settings',    label: 'Institution Settings', icon: Building,     description: 'Configure institutional parameters',         path: 'institution_settings'   },
-    { id: 'analytics',               label: 'Analytics & Reports',  icon: BarChart3,    description: 'Platform analytics and reporting',           path: 'analytics'              },
-    { id: 'financial',               label: 'Financial Overview',   icon: DollarSign,   description: 'Revenue and financial metrics',              path: 'financial'              },
-    { id: 'system_logs',             label: 'System Logs',          icon: Database,     description: 'View system activity logs',                  path: 'system_logs'            },
-    { id: 'backup_restore',          label: 'Backup & Restore',     icon: Shield,       description: 'Data backup and recovery',                   path: 'backup_restore'         },
-    { id: 'scheduling',              label: 'System Scheduling',    icon: Calendar,     description: 'Manage system maintenance',                  path: 'scheduling'             },
     { id: 'content_moderation',      label: 'Content Moderation',   icon: FileText,     description: 'Review and moderate content',                path: 'content_moderation'     },
     { id: 'notifications',           label: 'System Notifications', icon: Bell,         description: 'Platform-wide notifications',                path: 'notifications'          },
-    { id: 'email_management',        label: 'Email Management',     icon: Mail,         description: 'Configure email settings',                   path: 'email_management'       },
-    { id: 'support',                 label: 'Support Center',       icon: HelpCircle,   description: 'Admin support and documentation',            path: 'support'                },
     { id: 'settings',                label: 'System Settings',      icon: Settings,     description: 'Configure platform settings',                path: 'settings'               },
   ];
 
@@ -424,6 +417,8 @@ const AdminDashboard = () => {
         return <AdminManageStudents />;
       case 'AdminManageTeachers':
         return <AdminManageTeachers />;
+      case 'content_moderation':
+        return <DiscussionForum role="admin" currentUserId={localStorage.getItem('userId')} />;
       // ─── Class Management ──────────────────────────────────────────────────────
       case 'classes':
         return <AdminClassManagement />;
@@ -463,7 +458,11 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
-      default:
+      case 'analytics':
+        return <Analytics />;
+      case 'content_moderation':
+        return <DiscussionForum role="admin" currentUserId={localStorage.getItem('userId')} />;
+        default:
         return (
           <PlaceholderPage
             title={currentMenuItem?.label || 'Page Not Found'}

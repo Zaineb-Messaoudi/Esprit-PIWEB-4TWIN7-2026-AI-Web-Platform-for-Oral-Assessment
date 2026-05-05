@@ -58,7 +58,7 @@ export class ClassesController {
 
   // GET /classes/instructor/:instructorId — admin looks up any instructor's classes
   @Get('instructor/:instructorId')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   findByInstructor(@Param('instructorId') instructorId: string) {
     return this.classesService.findByInstructor(instructorId);
   }

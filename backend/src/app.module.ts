@@ -16,6 +16,7 @@ import { AdminModule } from './admin/admin.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { AssignmentsModule } from './assignements/assignements.module';
 import { SessionsGateway } from './sessions/sessions.gateway';
+import { RecordingModule } from './recording/recording.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SessionsGateway } from './sessions/sessions.gateway';
     AdminModule,
     SessionsModule,
     AssignmentsModule,
+    RecordingModule,
   ],
   controllers: [AppController],
   providers: [AppService, SessionsGateway],

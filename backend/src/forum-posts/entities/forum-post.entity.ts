@@ -29,17 +29,40 @@ export class ForumPost {
         authorId: { type: Types.ObjectId, ref: 'User' },
         content: String,
         createdAt: Date,
+        isAutoFlagged: { type: Boolean, default: false },
+        flagReasons: { type: [String], default: [] },
       },
     ],
     default: [],
   })
-  replies!: { authorId: Types.ObjectId; content: string; createdAt: Date }[];
+  replies!: {
+    authorId: Types.ObjectId;
+    content: string;
+    createdAt: Date;
+    isAutoFlagged: boolean;
+    flagReasons: string[];
+  }[];
 
+  // ── Manual moderation ───────────────────────────────────────────────────
   @Prop({ default: false })
   isModerated!: boolean;
 
   @Prop({ default: false })
   isFlagged!: boolean;
+
+  // ── Auto moderation ─────────────────────────────────────────────────────
+  @Prop({ default: false })
+  isAutoFlagged!: boolean;
+
+  @Prop({ type: [String], default: [] })
+  flagReasons!: string[];
+
+  @Prop({
+    type: String,
+    enum: ['none', 'low', 'medium', 'high'],
+    default: 'none',
+  })
+  flagSeverity!: string;
 }
 
 export const ForumPostSchema = SchemaFactory.createForClass(ForumPost);

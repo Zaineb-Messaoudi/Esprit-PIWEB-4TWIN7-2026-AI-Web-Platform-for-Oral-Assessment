@@ -18,7 +18,7 @@ const userId = () => localStorage.getItem('userId') || '';
 const defaultSummary = {
   total: 0,
   pending: 0,
-  evaluated: 0,
+  cancelled: 0,
   inProgress: 0,
 };
 
@@ -34,8 +34,8 @@ const formatDateTime = (value) => {
 
 const statusStyles = {
   pending:     'bg-amber-500/15 text-amber-200 border border-amber-400/30',
-  evaluated:   'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30',
-  in_progress: 'bg-sky-500/15 text-sky-200 border border-sky-400/30',
+  cancelled:   'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30',
+  graded: 'bg-sky-500/15 text-sky-200 border border-sky-400/30',
 };
 
 function StudentSubmissionHistory() {
@@ -174,8 +174,8 @@ function StudentSubmissionHistory() {
             {[
               { label: 'All submissions', value: summary.total,      icon: ClipboardList, accent: isDark ? 'text-red-200'     : 'text-red-700'     },
               { label: 'Pending',         value: summary.pending,    icon: Clock3,        accent: isDark ? 'text-amber-200'   : 'text-amber-700'   },
-              { label: 'In progress',     value: summary.inProgress, icon: LoaderCircle,  accent: isDark ? 'text-sky-200'     : 'text-sky-700'     },
-              { label: 'Evaluated',       value: summary.evaluated,  icon: CheckCircle2,  accent: isDark ? 'text-emerald-200' : 'text-emerald-700' },
+              { label: 'Graded',     value: summary.graded, icon: LoaderCircle,  accent: isDark ? 'text-sky-200'     : 'text-sky-700'     },
+              { label: 'Cancelled',       value: summary.cancelled,  icon: CheckCircle2,  accent: isDark ? 'text-emerald-200' : 'text-emerald-700' },
             ].map(({ label, value, icon: Icon, accent }) => (
               <div
                 key={label}
@@ -248,16 +248,12 @@ function StudentSubmissionHistory() {
             {/* Status */}
             <label className="space-y-2 text-sm">
               <span className={subtleText}>Status</span>
-              <select
-                name="status"
-                value={filters.status}
-                onChange={handleFilterChange}
-                className={`w-full rounded-2xl border px-4 py-3 outline-none transition ${inputBase}`}
-              >
+              <select name="status" value={filters.status} onChange={handleFilterChange}
+                  className={`w-full rounded-2xl border px-4 py-3 outline-none transition ${inputBase}`}>
                 <option value="">All statuses</option>
                 <option value="pending">Pending</option>
-                <option value="in_progress">In progress</option>
-                <option value="evaluated">Evaluated</option>
+                <option value="graded">Graded</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </label>
 

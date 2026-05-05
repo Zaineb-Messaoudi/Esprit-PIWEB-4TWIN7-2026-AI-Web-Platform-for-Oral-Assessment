@@ -22,6 +22,7 @@ import {
   Moon,
   Layers,
   Video,
+  ClipboardList,
 } from 'lucide-react';
 
 import StudyOverview from './StudyOverview';
@@ -100,20 +101,13 @@ const StudyDashboard = () => {
 
   const menuItems = [
     { id: 'overview',      label: 'Overview',             icon: Home,          description: 'Study summary and quick insights',      path: ''            },
-    { id: 'ExamsQuiz',     label: 'Exams & Quizzes',      icon: FileText,      description: 'Upcoming tests and past results',       path: 'quizzes'     },
-    // ─── Class Management ──────────────────────────────────────────────────────
     { id: 'classes',       label: 'My Class',             icon: Layers,        description: 'View your class and classmates',        path: 'classes'     },
     { id: 'Submissions',   label: 'Submissions',         icon: Target,      description: 'Review your submission history',         path: 'submissionshistory' },
     { id: 'assignments',   label: 'Assignments',         icon: Target,      description: 'Track and submit assignments',           path: 'assignments' },
     { id: 'sessions',      label: 'My Session',           icon: Video,        description: 'Check your slot and record',             path: 'sessions' },
-    { id: 'schedule',      label: 'Schedule',             icon: Calendar,      description: 'Daily and weekly learning schedule',    path: 'schedule'    },
-    { id: 'progress',      label: 'Progress & Analytics', icon: TrendingUp,    description: 'Your learning analytics and goals',     path: 'progress'    },
-    { id: 'achievements',  label: 'Achievements',         icon: Award,         description: 'Your badges and certificates',          path: 'achievements'},
-    { id: 'library',       label: 'Resource Library',     icon: Library,       description: 'Extra resources and materials',         path: 'library'     },
+    { id: 'reports', label: 'My Reports', icon: ClipboardList, description: 'View your evaluation reports and feedback', path: 'reports' },
     { id: 'forum',         label: 'Discussion Forum',     icon: MessageSquare, description: 'Ask and answer questions',              path: 'forum'       },
-    { id: 'study_groups',  label: 'Study Groups',         icon: Users,         description: 'Join or create study circles',          path: 'study_groups'},
     { id: 'notifications', label: 'Notifications',        icon: Bell,          description: 'Alerts and important messages',         path: 'notifications'},
-    { id: 'support',       label: 'Support Center',       icon: HelpCircle,    description: 'Ask for help or report issues',         path: 'support'     },
     { id: 'settings',      label: 'Settings',             icon: Settings,      description: 'Manage your profile and preferences',   path: 'settings'    },
   ];
 

@@ -22,6 +22,8 @@ import { Submission, SubmissionDocument } from './entities/submission.entity';
 import { Class, ClassDocument } from '../classes/entities/class.entity';
 import { User, UserDocument, UserRole } from '../users/entities/user.entity';
 import { AssignmentsService } from '../assignements/assignements.service';
+import { AiTriggerService } from '../ai-analyses/ai-trigger.service';
+import { join } from 'path';
 
 type LeanUser = Omit<User, '_id'> & { _id: Types.ObjectId };
 
@@ -62,9 +64,48 @@ export class SubmissionsService {
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
     private readonly assignmentsService: AssignmentsService,
+    private readonly aiTriggerService: AiTriggerService,
   ) {}
 
   // ─── PRIVATE HELPERS ─────────────────────────────────────────────────────
+
+  private resolveFilePath(fileUrl: string): string {
+    // fileUrl is like "/uploads/submissions/filename.ext"
+    return join(process.cwd(), fileUrl);
+  }
+
+  private triggerAiAnalysis(submission: SubmissionDocument): void {
+    const id = submission._id.toString();
+
+    let audioPath: string | undefined;
+    let videoPath: string | undefined;
+
+    const fileType = submission.fileType as SubmissionFileType;
+
+    if (fileType === SubmissionFileType.AUDIO) {
+      const url = submission.fileUrl ?? submission.audioFileUrl;
+      if (url) audioPath = this.resolveFilePath(url);
+    } else if (fileType === SubmissionFileType.VIDEO) {
+      const url = submission.fileUrl ?? submission.videoFileUrl;
+      if (url) videoPath = this.resolveFilePath(url);
+      audioPath = videoPath;
+    }
+
+    if (!audioPath) {
+      return; // no file to analyze
+    }
+
+    // Fire and forget — never block submission response
+    this.aiTriggerService
+      .triggerAnalysis(
+        id,
+        audioPath,
+        videoPath !== audioPath ? videoPath : undefined,
+      )
+      .catch((err) =>
+        console.error(`[AI] Analysis failed for submission ${id}:`, err),
+      );
+  }
 
   private toObjectId(id: string, field = 'id'): Types.ObjectId {
     if (!Types.ObjectId.isValid(id)) {
@@ -330,6 +371,10 @@ export class SubmissionsService {
       submittedAt: new Date(),
     });
 
+    if (!submission.isDraft) {
+      this.triggerAiAnalysis(submission);
+    }
+
     const [mappedSubmission] = await this.mapSubmissions([
       submission.toObject() as LeanSubmission,
     ]);
@@ -411,6 +456,8 @@ export class SubmissionsService {
 
     submission.isDraft = false;
     submission.submittedAt = new Date();
+    const saved = await submission.save();
+    this.triggerAiAnalysis(saved);
     return submission.save();
   }
 

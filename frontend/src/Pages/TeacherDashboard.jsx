@@ -22,6 +22,7 @@ import {
   Sun, Moon,
   Layers,
   Target,
+  LayoutList,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import TeacherSettings from '../Components/TeacherSettings';
@@ -200,20 +201,15 @@ const TeacherDashboard = () => {
 
   const menuItems = [
     { id: 'overview',       label: 'Dashboard',         icon: Home,          description: 'Overview of your teaching activities',    path: '/teacherdashboard'              },
-    { id: 'quizzes',        label: 'Quizzes',            icon: ClipboardList, description: 'Create and manage assignments',           path: '/teacherdashboard/quizzes'      },
-        { id: 'assignments', label: 'Assignments', icon: Target, description: 'Manage audio/video assignments', path: '/teacherdashboard/assignments' },
-    // ─── Class Management ──────────────────────────────────────────────────────
+    { id: 'assignments', label: 'Assignments', icon: Target, description: 'Manage audio/video assignments', path: '/teacherdashboard/assignments' },
+    { id: 'rubrics',        label: 'Rubrics',            icon: LayoutList,    description: 'Manage evaluation rubrics',               path: '/teacherdashboard/rubrics'     },
     { id: 'classes',        label: 'My Classes',   icon: Layers,        description: 'Manage your classes and student lists',   path: '/teacherdashboard/classes/'      },
     { id: 'sessions',       label: 'Live Sessions', icon: Video,        description: 'Run oral recording sessions',             path: '/teacherdashboard/sessions' },
     { id: 'submissions', label: 'Submissions', icon: FileText, description: 'Review submissions and find missing work', path: '/teacherdashboard/submissions' },
-    { id: 'attendance',     label: 'Attendance',         icon: UserCheck,     description: 'Track student attendance',                path: '/teacherdashboard/attendance'   },
     { id: 'analytics',      label: 'Analytics',          icon: BarChart3,     description: 'Student performance analytics',           path: '/teacherdashboard/analytics'    },
     { id: 'schedule',       label: 'Class Schedule',     icon: Calendar,      description: 'Manage your teaching schedule',           path: '/teacherdashboard/schedule'     },
-    { id: 'content',        label: 'Content Library',    icon: Library,       description: 'Course materials and resources',          path: '/teacherdashboard/content'      },
-    { id: 'live_classes',   label: 'Live Classes',       icon: Video,         description: 'Conduct virtual classes',                 path: '/teacherdashboard/live_classes' },
     { id: 'forums',         label: 'Discussion Forums',  icon: MessageSquare, description: 'Moderate class discussions',              path: '/teacherdashboard/forums'       },
     { id: 'notifications',  label: 'Notifications',      icon: Bell,          description: 'System alerts and updates',               path: '/teacherdashboard/notifications'},
-    { id: 'support',        label: 'Support',            icon: HelpCircle,    description: 'Get help and report issues',              path: '/teacherdashboard/support'      },
     { id: 'settings',       label: 'Settings',           icon: Settings,      description: 'Configure your preferences',             path: '/teacherdashboard/settings'     },
   ];
 

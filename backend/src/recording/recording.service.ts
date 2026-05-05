@@ -30,6 +30,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Express } from 'express';
 import 'multer';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegPath from 'ffmpeg-static';
+ffmpeg.setFfmpegPath(ffmpegPath as string);
 
 @Injectable()
 export class RecordingService {
@@ -57,32 +60,33 @@ export class RecordingService {
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
-    const filename = `${Date.now()}-${file.originalname}`;
+
+    const filename = `${Date.now()}-raw.webm`;
     const filePath = path.join(uploadsDir, filename);
+
     fs.writeFileSync(filePath, file.buffer);
+
     return filePath;
   }
 
-  // ─── START RECORDING (creates a pending Recording buffer) ─────────────────
+  // ─── START RECORDING ──────────────────────────────────────────────────────
 
   async startRecording(
     sessionId: string,
     file: Express.Multer.File,
     fileType: FileType,
     source: RecordingSource,
-    actorId: string, // instructorId or studentId depending on source
+    actorId: string,
   ): Promise<RecordingDocument> {
     const { student, session } =
       await this.sessionsService.getCurrentStudent(sessionId);
 
-    // For instructor recordings, actorId is the instructorId — verify ownership
     if (source === RecordingSource.INSTRUCTOR) {
       if (session.instructorId.toString() !== actorId) {
         throw new ForbiddenException('Not your session');
       }
     }
 
-    // For student recordings, actorId is the studentId — verify it's their turn
     if (source === RecordingSource.STUDENT) {
       if (!student._id.equals(this.toObjectId(actorId, 'student id'))) {
         throw new ForbiddenException('It is not your turn yet');
@@ -91,7 +95,6 @@ export class RecordingService {
 
     const filePath = this.saveFileToDisk(file);
 
-    // Delete any previous pending recording for this student in this session
     await this.recordingModel.deleteMany({
       sessionId: this.toObjectId(sessionId, 'session id'),
       studentId: student._id,
@@ -128,7 +131,7 @@ export class RecordingService {
     return { filePath: recording.filePath, fileType: recording.fileType };
   }
 
-  // ─── SAVE — converts Recording → Submission, then deletes the buffer ──────
+  // ─── SAVE ─────────────────────────────────────────────────────────────────
 
   async saveRecording(
     recordingId: string,
@@ -155,7 +158,8 @@ export class RecordingService {
     );
     if (!assignment) throw new NotFoundException('Assignment not found');
 
-    // Build the final Submission from the Recording buffer
+    const relativeUrl = `/uploads/${path.basename(recording.filePath)}`;
+
     const submissionData: Partial<Submission> = {
       studentId: recording.studentId,
       classId: recording.classId,
@@ -176,20 +180,17 @@ export class RecordingService {
       submittedAt: new Date(),
     };
 
-    // Assign to the correct URL field based on file type
     if (recording.fileType === FileType.AUDIO) {
-      submissionData.audioFileUrl = recording.filePath;
+      submissionData.audioFileUrl = relativeUrl;
     } else {
-      submissionData.videoFileUrl = recording.filePath;
+      submissionData.videoFileUrl = relativeUrl;
     }
 
     const submission = await this.submissionModel.create(submissionData);
 
-    // Mark buffer as no longer pending (soft — keeps file on disk for now)
     recording.isPending = false;
     await recording.save();
 
-    // Advance the session to the next student
     await this.sessionsService.nextStudent(
       recording.sessionId.toString(),
       recording.studentId.toString(),
@@ -199,7 +200,7 @@ export class RecordingService {
     return submission;
   }
 
-  // ─── DISCARD (instructor or student rejects preview) ──────────────────────
+  // ─── DISCARD ──────────────────────────────────────────────────────────────
 
   async discardRecording(
     recordingId: string,
@@ -226,7 +227,6 @@ export class RecordingService {
       throw new ForbiddenException('You cannot discard this recording');
     }
 
-    // Remove file from disk
     if (fs.existsSync(recording.filePath)) {
       fs.unlinkSync(recording.filePath);
     }
@@ -236,7 +236,6 @@ export class RecordingService {
   }
 
   // ─── STUDENT SELF-RECORDING ───────────────────────────────────────────────
-  // Student records themselves (audio or video) during the live session
 
   async studentRecord(
     sessionId: string,
@@ -253,7 +252,6 @@ export class RecordingService {
     );
   }
 
-  // Student submits their own recording → becomes a Submission
   async studentSubmitRecording(
     recordingId: string,
     studentId: string,
@@ -273,6 +271,8 @@ export class RecordingService {
       recording.assignmentId,
     );
     if (!assignment) throw new NotFoundException('Assignment not found');
+
+    const relativeUrl = `/uploads/${path.basename(recording.filePath)}`;
 
     const submissionData: Partial<Submission> = {
       studentId: recording.studentId,
@@ -294,9 +294,9 @@ export class RecordingService {
     };
 
     if (recording.fileType === FileType.AUDIO) {
-      submissionData.audioFileUrl = recording.filePath;
+      submissionData.audioFileUrl = relativeUrl;
     } else {
-      submissionData.videoFileUrl = recording.filePath;
+      submissionData.videoFileUrl = relativeUrl;
     }
 
     const submission = await this.submissionModel.create(submissionData);
@@ -307,30 +307,50 @@ export class RecordingService {
     return submission;
   }
 
+  // ─── SAVE BLOB (WebRTC flow) ───────────────────────────────────────────────
+  //
+  // explicitStudentId — passed from the frontend when source === 'instructor'.
+  // The frontend sets this BEFORE calling nextStudent(), so we get the correct
+  // student even though the session index has already advanced by the time the
+  // blob finishes uploading (race condition fix).
+
   async saveBlobRecording(
     sessionId: string,
     file: Express.Multer.File,
     fileType: FileType,
     source: RecordingSource,
     actorId: string,
+    explicitStudentId?: string,
   ): Promise<SubmissionDocument> {
     const session = await this.sessionsService.findOne(sessionId);
 
-    // Resolve which student this blob is for
     let studentId: Types.ObjectId;
+
     if (source === RecordingSource.INSTRUCTOR) {
       if (session.instructorId.toString() !== actorId) {
         throw new ForbiddenException('Not your session');
       }
-      // Get the student whose turn just ended from session state
-      const students =
-        await this.sessionsService.getCurrentStudentById(sessionId);
-      studentId = students._id;
+
+      if (explicitStudentId && Types.ObjectId.isValid(explicitStudentId)) {
+        // Use the student ID sent by the frontend — this was captured before
+        // nextStudent() advanced the session, so it's always correct.
+        studentId = new Types.ObjectId(explicitStudentId);
+      } else {
+        // Fallback: derive from current session state.
+        // This may return the wrong student if nextStudent() already ran,
+        // but it's kept as a safety net for edge cases.
+        const student =
+          await this.sessionsService.getCurrentStudentById(sessionId);
+        studentId = student._id;
+      }
     } else {
       studentId = this.toObjectId(actorId, 'student id');
     }
 
-    const filePath = this.saveFileToDisk(file);
+    const rawPath = this.saveFileToDisk(file);
+    const filePath = await this.fixWebmDuration(rawPath);
+
+    const relativeUrl = `/uploads/${path.basename(filePath)}`;
 
     const assignment = await this.assignmentModel.findById(
       session.assignmentId,
@@ -361,11 +381,33 @@ export class RecordingService {
     };
 
     if (fileType === FileType.AUDIO) {
-      submissionData.audioFileUrl = filePath;
+      submissionData.audioFileUrl = relativeUrl;
     } else {
-      submissionData.videoFileUrl = filePath;
+      submissionData.videoFileUrl = relativeUrl;
     }
 
     return this.submissionModel.create(submissionData);
+  }
+
+  private fixWebmDuration(inputPath: string): Promise<string> {
+    const outputPath = inputPath.replace('-raw.webm', '.webm');
+
+    return new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .outputOptions(['-c copy', '-fflags +genpts'])
+        .save(outputPath)
+        .on('end', () => {
+          try {
+            fs.unlinkSync(inputPath); // delete raw file
+          } catch (e) {
+            console.warn('Failed to delete raw file:', e);
+          }
+          resolve(outputPath);
+        })
+        .on('error', (err) => {
+          console.error('FFmpeg error:', err);
+          reject(err); // fallback to raw if fails
+        });
+    });
   }
 }

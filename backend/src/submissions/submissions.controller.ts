@@ -54,6 +54,8 @@ const ALLOWED_MIMETYPES = [
   'video/mp4', // .mp4
   'video/x-msvideo', // .avi
   'video/quicktime', // .mov
+  'video/webm', // .webm (video recording)
+  'audio/webm', // .webm (audio recording)
 ];
 
 const fileFilter = (

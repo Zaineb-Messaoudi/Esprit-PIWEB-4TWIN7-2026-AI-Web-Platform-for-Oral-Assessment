@@ -4,20 +4,20 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
+  ClipboardList,
   Download,
   FileAudio,
   FileVideo,
-  GraduationCap,
   Loader2,
   Mail,
   Pause,
   Play,
   RotateCcw,
-  Save,
   User,
   Volume2,
   VolumeX,
   XCircle,
+  Edit,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContect.jsx';
 import { api } from '../utils/api'
@@ -80,13 +80,13 @@ function WaveformBars({ playing }) {
 /* ─── Custom media player ──────────────────────────────────── */
 function MediaPlayer({ src, isAudio, isDark }) {
   const mediaRef = useRef(null);
-  const [playing, setPlaying]       = useState(false);
-  const [muted, setMuted]           = useState(false);
-  const [progress, setProgress]     = useState(0);
+  const [playing, setPlaying]         = useState(false);
+  const [muted, setMuted]             = useState(false);
+  const [progress, setProgress]       = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration]     = useState(0);
-  const [volume, setVolume]         = useState(1);
-  const [loaded, setLoaded]         = useState(false);
+  const [duration, setDuration]       = useState(0);
+  const [volume, setVolume]           = useState(1);
+  const [loaded, setLoaded]           = useState(false);
 
   const toggle = () => {
     const m = mediaRef.current;
@@ -192,7 +192,6 @@ function MediaPlayer({ src, isAudio, isDark }) {
             onEnded={() => setPlaying(false)}
           />
           <div className="flex flex-col items-center gap-6 w-full max-w-md">
-            {/* Icon */}
             <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl ${
               isDark ? 'bg-red-500/20 border border-red-400/30' : 'bg-red-50 border border-red-200'
             }`}>
@@ -224,7 +223,6 @@ function MediaPlayer({ src, isAudio, isDark }) {
         {/* Time + buttons */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {/* Play/Pause */}
             <button
               onClick={toggle}
               disabled={!loaded}
@@ -237,7 +235,6 @@ function MediaPlayer({ src, isAudio, isDark }) {
               {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
             </button>
 
-            {/* Restart */}
             <button
               onClick={restart}
               disabled={!loaded}
@@ -248,13 +245,11 @@ function MediaPlayer({ src, isAudio, isDark }) {
               <RotateCcw size={15} />
             </button>
 
-            {/* Time */}
             <span className={`text-xs tabular-nums ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               {fmtDuration(currentTime) || '0:00'} / {fmtDuration(duration) || '—'}
             </span>
           </div>
 
-          {/* Volume */}
           <div className="flex items-center gap-2">
             <button onClick={toggleMute} className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'}>
               {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
@@ -265,8 +260,6 @@ function MediaPlayer({ src, isAudio, isDark }) {
               onChange={handleVolume}
               className="w-20 h-1 accent-red-500 cursor-pointer"
             />
-
-            {/* Download */}
             <a
               href={src} download target="_blank" rel="noreferrer"
               className={`ml-2 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
@@ -289,13 +282,12 @@ export default function SubmissionDetail() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const [submission, setSubmission] = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState('');
-  const [grade, setGrade]           = useState('');
-  const [status, setStatus]         = useState('');
-  const [saving, setSaving]         = useState(false);
-  const [saved, setSaved]           = useState(false);
+  const [submission, setSubmission]               = useState(null);
+  const [loading, setLoading]                     = useState(true);
+  const [error, setError]                         = useState('');
+  const [evaluation, setEvaluation]               = useState(null);
+  const [loadingEvaluation, setLoadingEvaluation] = useState(false);
+  const [evaluationError, setEvaluationError]     = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -303,8 +295,6 @@ export default function SubmissionDetail() {
       try {
         const { data } = await api.get(`/submissions/${id}`);
         setSubmission(data);
-        setGrade(data.grade ?? '');
-        setStatus(data.status ?? 'pending');
       } catch (err) {
         setError(err.response?.data?.message || 'Could not load submission.');
       } finally {
@@ -314,31 +304,32 @@ export default function SubmissionDetail() {
     load();
   }, [id]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const payload = { status };
-      if (grade !== '') payload.grade = Number(grade);
-      const { data } = await api.patch(`/submissions/${id}`, payload);
-      setSubmission(data);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save changes.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  useEffect(() => {
+    const loadEvaluation = async () => {
+      if (!id) return;
+      setLoadingEvaluation(true);
+      setEvaluationError('');
+      try {
+        const { data } = await api.get(`/evaluations/submission/${id}`);
+        setEvaluation(data);
+      } catch (err) {
+        setEvaluationError(
+          err.response?.data?.message || 'No evaluation found for this submission.'
+        );
+        setEvaluation(null);
+      } finally {
+        setLoadingEvaluation(false);
+      }
+    };
+    loadEvaluation();
+  }, [id]);
 
   /* styles */
-  const cardBase = isDark
+  const cardBase   = isDark
     ? 'bg-white/10 border-white/10 text-white'
     : 'bg-white/90 border-gray-200 text-gray-900 shadow-sm';
   const mutedText  = isDark ? 'text-gray-300' : 'text-gray-600';
   const subtleText = isDark ? 'text-gray-400' : 'text-gray-500';
-  const inputBase  = isDark
-    ? 'bg-black/20 border-white/10 text-white placeholder:text-gray-400'
-    : 'bg-white border-gray-200 text-gray-900';
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -353,11 +344,11 @@ export default function SubmissionDetail() {
     </div>
   );
 
-  const mediaUrl = submission?.fileUrl || submission?.audioFileUrl || submission?.videoFileUrl;
+  const mediaUrl     = submission?.fileUrl || submission?.audioFileUrl || submission?.videoFileUrl;
   const fullMediaUrl = mediaUrl ? `${BASE_URL}${mediaUrl}` : null;
-  const isAudio = submission?.fileType === 'audio' || !!submission?.audioFileUrl;
-  const statusMeta = STATUS_META[status] || STATUS_META.pending;
-  const StatusIcon = statusMeta.icon;
+  const isAudio      = submission?.fileType === 'audio' || !!submission?.audioFileUrl;
+  const statusMeta   = STATUS_META[submission?.status] || STATUS_META.pending;
+  const StatusIcon   = statusMeta.icon;
 
   return (
     <div className="space-y-6">
@@ -416,12 +407,12 @@ export default function SubmissionDetail() {
             <h3 className="text-lg font-semibold mb-4">Submission details</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                ['Assignment',    submission?.assignmentTitle || '—'],
-                ['Title',         submission?.title || '—'],
-                ['Type',          (submission?.submissionType || '—').replace('_', ' ')],
-                ['File type',     submission?.fileType || '—'],
-                ['Submitted at',  fmtDate(submission?.submittedAt)],
-                ['Recorded by',   submission?.recordedBy
+                ['Assignment',   submission?.assignmentTitle || '—'],
+                ['Title',        submission?.title || '—'],
+                ['Type',         (submission?.submissionType || '—').replace('_', ' ')],
+                ['File type',    submission?.fileType || '—'],
+                ['Submitted at', fmtDate(submission?.submittedAt)],
+                ['Recorded by',  submission?.recordedBy
                     ? [submission.recordedBy.firstName, submission.recordedBy.lastName].filter(Boolean).join(' ') || submission.recordedBy.username
                     : 'Student upload'],
               ].map(([label, value]) => (
@@ -437,7 +428,7 @@ export default function SubmissionDetail() {
           </section>
         </div>
 
-        {/* ── RIGHT — student + grade/status ──────────────────── */}
+        {/* ── RIGHT — student + evaluation status ─────────────── */}
         <div className="space-y-6">
 
           {/* Student info */}
@@ -475,7 +466,6 @@ export default function SubmissionDetail() {
               )}
             </div>
 
-            {/* Class info */}
             {submission?.class && (
               <div className={`mt-3 rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-black/20' : 'border-gray-100 bg-gray-50'}`}>
                 <p className={`text-xs mb-1 ${subtleText}`}>Class</p>
@@ -487,68 +477,133 @@ export default function SubmissionDetail() {
             )}
           </section>
 
-          {/* Grade & Status */}
+          {/* Evaluation Section */}
           <section className={`rounded-3xl border p-6 ${cardBase}`}>
             <div className="flex items-center gap-3 mb-5">
               <div className={`rounded-2xl p-3 ${isDark ? 'bg-white/10' : 'bg-red-50'}`}>
-                <GraduationCap className={isDark ? 'text-red-200' : 'text-red-600'} size={20} />
+                <ClipboardList className={isDark ? 'text-red-200' : 'text-red-600'} size={20} />
               </div>
-              <h3 className="text-lg font-semibold">Grade & Status</h3>
+              <h3 className="text-lg font-semibold">Evaluation</h3>
             </div>
 
             <div className="space-y-4">
-              {/* Current status badge */}
-              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border ${statusMeta.cls}`}>
-                <StatusIcon size={13} />
-                {statusMeta.label}
+
+              {/* Submission status badge (read-only) */}
+              <div className="space-y-2">
+                <p className={`text-xs font-semibold ${subtleText}`}>Current status</p>
+                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border ${statusMeta.cls}`}>
+                  <StatusIcon size={13} />
+                  {statusMeta.label}
+                </div>
               </div>
 
-              {/* Status select */}
-              <label className="block space-y-2 text-sm">
-                <span className={subtleText}>Change status</span>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 outline-none transition ${inputBase}`}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="graded">Graded</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </label>
+              {/* Grade display (read-only, if exists) */}
+              {submission?.grade != null && (
+                <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-black/20' : 'border-gray-100 bg-gray-50'}`}>
+                  <p className={`text-xs mb-1 ${subtleText}`}>Grade</p>
+                  <p className="text-2xl font-bold">
+                    {submission.grade}{' '}
+                    <span className={`text-sm font-medium ${subtleText}`}>/ 20</span>
+                  </p>
+                </div>
+              )}
 
-              {/* Grade input */}
-              <label className="block space-y-2 text-sm">
-                <span className={subtleText}>Grade (0 – 20)</span>
-                <input
-                  type="number"
-                  min="0" max="20" step="0.5"
-                  value={grade}
-                  onChange={(e) => setGrade(e.target.value)}
-                  placeholder="Enter grade…"
-                  className={`w-full rounded-2xl border px-4 py-3 outline-none transition ${inputBase}`}
-                />
-              </label>
+              {/* Evaluation loading state */}
+              {loadingEvaluation && (
+                <div className="flex items-center justify-center gap-2 py-4">
+                  <Loader2 size={15} className="animate-spin text-red-400" />
+                  <span className={`text-xs ${subtleText}`}>Loading evaluation…</span>
+                </div>
+              )}
 
-              {/* Save */}
+              {/* Evaluation status message */}
+              {!loadingEvaluation && evaluationError && !evaluation && (
+                <div className={`text-xs rounded-xl px-3 py-2 border ${
+                  isDark
+                    ? 'text-amber-300 bg-amber-500/10 border-amber-400/20'
+                    : 'text-amber-700 bg-amber-50 border-amber-200'
+                }`}>
+                  {evaluationError}
+                </div>
+              )}
+
+              {/* Evaluation summary (if exists and submitted) */}
+              {evaluation?.status === 'submitted' && (
+                <div className={`rounded-2xl border p-4 space-y-3 ${
+                  isDark ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                    <p className={`text-xs font-semibold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      Evaluation submitted
+                    </p>
+                  </div>
+                  
+                  {evaluation.rubricId && (
+                    <div className="space-y-1">
+                      <p className={`text-[10px] uppercase tracking-wider font-bold ${subtleText}`}>
+                        Rubric used
+                      </p>
+                      <p className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {evaluation.rubricId?.name || 'Rubric evaluation'}
+                      </p>
+                    </div>
+                  )}
+
+                  {!evaluation.rubricId && (
+                    <p className={`text-xs ${isDark ? 'text-emerald-200' : 'text-emerald-600'}`}>
+                      Freeform evaluation with written feedback
+                    </p>
+                  )}
+
+                  {evaluation.evaluationDate && (
+                    <p className={`text-[10px] ${subtleText}`}>
+                      Evaluated: {fmtDate(evaluation.evaluationDate)}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Draft evaluation notice */}
+              {evaluation?.status === 'draft' && (
+                <div className={`rounded-2xl border p-4 ${
+                  isDark ? 'border-blue-500/20 bg-blue-500/10' : 'border-blue-200 bg-blue-50'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Edit size={16} className="text-blue-400" />
+                    <p className={`text-xs font-semibold ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                      Draft in progress
+                    </p>
+                  </div>
+                  <p className={`text-xs ${isDark ? 'text-blue-200' : 'text-blue-600'}`}>
+                    This evaluation has not been submitted yet. Students cannot see it.
+                  </p>
+                </div>
+              )}
+
+              {/* Create / Edit Evaluation button */}
               <button
-                onClick={handleSave}
-                disabled={saving}
-                className={`w-full flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition ${
-                  saved
-                    ? isDark ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white'
-                    : isDark ? 'bg-red-500 hover:bg-red-400 text-white disabled:opacity-50'
-                             : 'bg-red-600 hover:bg-red-700 text-white disabled:opacity-50'
+                onClick={() => navigate(`../submissions/${id}/evaluate`)}
+                className={`w-full flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-semibold transition shadow-lg ${
+                  evaluation
+                    ? isDark 
+                      ? 'bg-blue-500 hover:bg-blue-400 text-white' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : isDark 
+                      ? 'bg-red-500 hover:bg-red-400 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
                 }`}
               >
-                {saving ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : saved ? (
-                  <><CheckCircle2 size={18} /> Saved!</>
-                ) : (
-                  <><Save size={18} /> Save changes</>
-                )}
+                <ClipboardList size={18} />
+                {evaluation ? 'Edit Evaluation' : 'Create Evaluation'}
               </button>
+
+              {/* Helpful note */}
+              <p className={`text-[10px] leading-relaxed ${subtleText}`}>
+                {evaluation
+                  ? 'Grade and status are managed within the evaluation form.'
+                  : 'Create an evaluation to provide feedback, assign a grade, and update the submission status.'}
+              </p>
             </div>
           </section>
         </div>

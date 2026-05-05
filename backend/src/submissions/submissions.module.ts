@@ -6,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Class, ClassSchema } from '../classes/entities/class.entity';
 import { User, UserSchema } from '../users/entities/user.entity';
 import { AssignmentsModule } from '../assignements/assignements.module';
+import { AiAnalysesModule } from '../ai-analyses/ai-analyses.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AssignmentsModule } from '../assignements/assignements.module';
       { name: User.name, schema: UserSchema },
     ]),
     AssignmentsModule,
+    AiAnalysesModule,
   ],
   controllers: [SubmissionsController],
   providers: [SubmissionsService],

@@ -56,10 +56,47 @@ const fileUploadInterceptor = FileInterceptor('file', {
 export class RecordingController {
   constructor(private readonly recordingService: RecordingService) {}
 
-  // ─── INSTRUCTOR ───────────────────────────────────────────────────────────
+  // ─── SESSION ROUTES (must all come before /:recordingId routes) ───────────
+
+  // POST /recordings/session/:sessionId/save-blob
+  // WebRTC recording ends → browser sends blob → saved as Submission directly.
+  //
+  // FIX: accepts optional `studentId` in the body.
+  // The frontend passes the student ID that was current BEFORE nextStudent()
+  // was called. Without this, getCurrentStudentById() runs after the session
+  // index has advanced and attributes the recording to the wrong student.
+  @Post('session/:sessionId/save-blob')
+  @Roles(UserRole.INSTRUCTOR, UserRole.STUDENT)
+  @UseInterceptors(fileUploadInterceptor)
+  saveBlobRecording(
+    @Param('sessionId') sessionId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('fileType') fileType: FileType,
+    @Body('source') source: RecordingSource,
+    @Body('studentId') studentId: string | undefined,
+    @Request() req: AuthRequest,
+  ) {
+    console.log('[Controller] save-blob called:', {
+      sessionId,
+      hasFile: !!file,
+      fileType,
+      source,
+      studentId,
+      userId: req.user?.userId,
+    });
+
+    if (!file) throw new BadRequestException('File is required');
+    return this.recordingService.saveBlobRecording(
+      sessionId,
+      file,
+      fileType,
+      source,
+      req.user.userId,
+      studentId,
+    );
+  }
 
   // POST /recordings/session/:sessionId/instructor
-  // Instructor records the current student — creates a pending Recording buffer
   @Post('session/:sessionId/instructor')
   @Roles(UserRole.INSTRUCTOR)
   @UseInterceptors(fileUploadInterceptor)
@@ -79,21 +116,7 @@ export class RecordingController {
     );
   }
 
-  // POST /recordings/:recordingId/save
-  // Instructor previewed and confirms — converts Recording → Submission, advances session
-  @Post(':recordingId/save')
-  @Roles(UserRole.INSTRUCTOR)
-  saveRecording(
-    @Param('recordingId') recordingId: string,
-    @Request() req: AuthRequest,
-  ) {
-    return this.recordingService.saveRecording(recordingId, req.user.userId);
-  }
-
-  // ─── STUDENT ──────────────────────────────────────────────────────────────
-
   // POST /recordings/session/:sessionId/student/audio
-  // Student records audio during their live session turn
   @Post('session/:sessionId/student/audio')
   @Roles(UserRole.STUDENT)
   @UseInterceptors(fileUploadInterceptor)
@@ -112,7 +135,6 @@ export class RecordingController {
   }
 
   // POST /recordings/session/:sessionId/student/video
-  // Student records video via webcam during their live session turn
   @Post('session/:sessionId/student/video')
   @Roles(UserRole.STUDENT)
   @UseInterceptors(fileUploadInterceptor)
@@ -130,8 +152,19 @@ export class RecordingController {
     );
   }
 
+  // ─── RECORDING ID ROUTES ──────────────────────────────────────────────────
+
+  // POST /recordings/:recordingId/save
+  @Post(':recordingId/save')
+  @Roles(UserRole.INSTRUCTOR)
+  saveRecording(
+    @Param('recordingId') recordingId: string,
+    @Request() req: AuthRequest,
+  ) {
+    return this.recordingService.saveRecording(recordingId, req.user.userId);
+  }
+
   // POST /recordings/:recordingId/submit
-  // Student confirms their own recording → Submission
   @Post(':recordingId/submit')
   @Roles(UserRole.STUDENT)
   studentSubmit(
@@ -144,10 +177,7 @@ export class RecordingController {
     );
   }
 
-  // ─── SHARED ───────────────────────────────────────────────────────────────
-
   // GET /recordings/:recordingId/preview
-  // Both instructor and student can preview before confirming
   @Get(':recordingId/preview')
   @Roles(UserRole.INSTRUCTOR, UserRole.STUDENT)
   getPreview(@Param('recordingId') recordingId: string) {
@@ -155,7 +185,6 @@ export class RecordingController {
   }
 
   // DELETE /recordings/:recordingId/discard
-  // Reject the preview — deletes buffer and file from disk
   @Delete(':recordingId/discard')
   @Roles(UserRole.INSTRUCTOR, UserRole.STUDENT)
   discardRecording(
@@ -163,25 +192,5 @@ export class RecordingController {
     @Request() req: AuthRequest,
   ) {
     return this.recordingService.discardRecording(recordingId, req.user.userId);
-  }
-
-  @Post('session/:sessionId/save-blob')
-  @Roles(UserRole.INSTRUCTOR, UserRole.STUDENT)
-  @UseInterceptors(fileUploadInterceptor)
-  saveBlobRecording(
-    @Param('sessionId') sessionId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('fileType') fileType: FileType,
-    @Body('source') source: RecordingSource,
-    @Request() req: AuthRequest,
-  ) {
-    if (!file) throw new BadRequestException('File is required');
-    return this.recordingService.saveBlobRecording(
-      sessionId,
-      file,
-      fileType,
-      source,
-      req.user.userId,
-    );
   }
 }

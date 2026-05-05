@@ -27,27 +27,20 @@ export const deleteAssignment = (id) =>
 
 // ─── SUBMISSIONS (student draft workflow) ────────────────────────────────────
 
-// POST /submissions/draft/upload  ← dedicated multipart endpoint
-// Body is multipart/form-data: file, classId, assignmentId, assignmentTitle,
-//                               title, submissionType, fileType
 export const uploadDraft = (formData) =>
   api.post('/submissions/draft/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then(r => r.data);
 
-// GET /submissions/draft/:assignmentId
 export const getDraft = (assignmentId) =>
   api.get(`/submissions/draft/${assignmentId}`).then(r => r.data);
 
-// POST /submissions/draft/submit/:id
 export const submitDraft = (submissionId) =>
   api.post(`/submissions/draft/submit/${submissionId}`).then(r => r.data);
 
-// DELETE /submissions/draft/:id
 export const deleteDraft = (submissionId) =>
   api.delete(`/submissions/draft/${submissionId}`).then(r => r.data);
 
-// PATCH /submissions/:id
 export const updateDraft = (submissionId, fields) =>
   api.patch(`/submissions/${submissionId}`, fields).then(r => r.data);
 
@@ -77,4 +70,32 @@ export const formatFileSize = (bytes) => {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-};
+}; // <--- L'accolade manquante était ici
+
+// ─── RUBRICS ────────────────────────────────────────────────
+export const getRubrics = () =>
+  api.get('/rubrics').then(r => r.data);
+
+export const getRubric = (id) =>
+  api.get('/rubrics/' + id).then(r => r.data);
+
+export const createRubric = (data) =>
+  api.post('/rubrics', data).then(r => r.data);
+
+export const updateRubric = (id, data) =>
+  api.patch('/rubrics/' + id, data).then(r => r.data);
+
+export const deleteRubric = (id) =>
+  api.delete('/rubrics/' + id).then(r => r.data);
+
+export const addCriterion = (rubricId, criterion) =>
+  api.post('/rubrics/' + rubricId + '/criteria', criterion).then(r => r.data);
+
+export const removeCriterion = (rubricId, index) =>
+  api.delete('/rubrics/' + rubricId + '/criteria/' + index).then(r => r.data);
+
+export const duplicateRubric = (id) =>
+  api.post('/rubrics/' + id + '/duplicate').then(r => r.data);
+
+export const getRubricTotalScore = (id) =>
+  api.get('/rubrics/' + id + '/total-score').then(r => r.data);

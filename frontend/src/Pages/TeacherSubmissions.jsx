@@ -62,6 +62,8 @@ function TeacherSubmissions() {
 
   const selectedClass  = classes.find((c) => c.id === filters.classId) || null;
   const studentOptions = selectedClass?.students || [];
+  const [evaluations, setEvaluations] = useState({});
+
 
   useEffect(() => {
     if (!filters.classId) {
@@ -100,6 +102,28 @@ function TeacherSubmissions() {
   }, []);
 
   useEffect(() => { loadOverview(); }, []); // eslint-disable-line
+
+  useEffect(() => {
+    const loadEvaluations = async () => {
+      if (!overview.length) return;
+      
+      const evalPromises = overview.map(sub => 
+        api.get(`/evaluations/submission/${sub.id}`)
+          .then(({ data }) => ({ id: sub.id, evaluation: data }))
+          .catch(() => ({ id: sub.id, evaluation: null }))
+      );
+      
+      const results = await Promise.all(evalPromises);
+      const evalMap = {};
+      results.forEach(({ id, evaluation }) => {
+        evalMap[id] = evaluation;
+      });
+      setEvaluations(evalMap);
+    };
+    
+    loadEvaluations();
+  }, [overview]);
+
 
   const buildParams = (sourceFilters = filters) => {
     const params = {};
@@ -340,6 +364,7 @@ function TeacherSubmissions() {
                 <th className="px-6 py-4 font-semibold">Status</th>
                 <th className="px-6 py-4 font-semibold">Submitted at</th>
                 <th className="px-6 py-4 font-semibold">Recorded by</th>
+                <th className="px-6 py-4 font-semibold">Evaluation</th>
                 <th className="px-6 py-4 w-8"></th>
               </tr>
             </thead>
@@ -387,6 +412,23 @@ function TeacherSubmissions() {
                     </td>
                     <td className="px-6 py-4">
                       <ChevronRight size={16} className={subtleText} />
+                    </td>
+                    <td className="px-6 py-4">
+                      {evaluations[submission.id] ? (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+                          evaluations[submission.id].status === 'submitted'
+                            ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30'
+                            : 'bg-amber-500/15 text-amber-200 border border-amber-400/30'
+                        }`}>
+                          {evaluations[submission.id].status === 'submitted' ? (
+                            <>✓ Submitted</>
+                          ) : (
+                            <>📝 Draft</>
+                          )}
+                        </span>
+                      ) : (
+                        <span className={`text-xs ${mutedText}`}>Not started</span>
+                      )}
                     </td>
                   </tr>
                 ))

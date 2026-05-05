@@ -14,6 +14,13 @@ export class AIAnalysis {
   })
   submissionId!: Types.ObjectId;
 
+  @Prop({
+    type: String,
+    enum: ['processing', 'completed', 'failed'],
+    default: 'processing',
+  })
+  status!: 'processing' | 'completed' | 'failed';
+
   @Prop()
   speechRate!: number;
 
@@ -52,6 +59,33 @@ export class AIAnalysis {
 
   @Prop({ default: Date.now })
   processingDate!: Date;
+
+  @Prop()
+  transcript?: string;
+
+  @Prop()
+  cefrLevel?: string;
+
+  @Prop({ type: String })
+  aiFeedback?: string;
+
+  @Prop({ type: String })
+  visualFeedback?: string;
+
+  @Prop({ type: Object })
+  charts?: Record<string, string | null>;
+
+  @Prop({ type: Object })
+  speechQuality?: Record<string, any>;
+
+  @Prop()
+  overallScore?: number;
+
+  @Prop()
+  wordCount?: number;
+
+  @Prop()
+  durationSeconds?: number;
 }
 
 export const AIAnalysisSchema = SchemaFactory.createForClass(AIAnalysis);

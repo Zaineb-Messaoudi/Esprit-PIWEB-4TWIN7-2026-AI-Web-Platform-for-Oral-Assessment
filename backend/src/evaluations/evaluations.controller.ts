@@ -1,45 +1,148 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { EvaluationsService } from './evaluations.service';
 import { CreateEvaluationDto } from './dto/create-evaluation.dto';
 import { UpdateEvaluationDto } from './dto/update-evaluation.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
+
+type AuthenticatedRequest = ExpressRequest & {
+  user: {
+    userId: string;
+    role: UserRole;
+  };
+};
 
 @Controller('evaluations')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class EvaluationsController {
   constructor(private readonly evaluationsService: EvaluationsService) {}
 
-  @Post()
-  create(@Body() createEvaluationDto: CreateEvaluationDto) {
-    return this.evaluationsService.create(createEvaluationDto);
+  @Get()
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  findAll(@Request() req: AuthenticatedRequest) {
+    return this.evaluationsService.findAll(req.user);
   }
 
-  @Get()
-  findAll() {
-    return this.evaluationsService.findAll();
+  @Post()
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  create(
+    @Body() dto: CreateEvaluationDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.create(dto, req.user);
   }
+
+  // ── Submission-scoped routes (must come before :id) ───────────────────────
+
+  @Get('submission/:submissionId')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR, UserRole.STUDENT)
+  findBySubmission(
+    @Param('submissionId') submissionId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.findBySubmission(submissionId, req.user);
+  }
+
+  /**
+   * Returns all rubrics available for the given submission, sorted so that
+   * rubrics explicitly linked to that submission's assignment appear first
+   * (isRecommended: true).  Universal rubrics are also recommended.
+   */
+  @Get('submission/:submissionId/rubrics')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  getAvailableRubrics(
+    @Param('submissionId') submissionId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.getAvailableRubrics(submissionId, req.user);
+  }
+
+  // ── Other scoped routes ───────────────────────────────────────────────────
+
+  @Get('instructor/:instructorId')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  findByInstructor(
+    @Param('instructorId') instructorId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.findByInstructor(instructorId, req.user);
+  }
+
+  @Get('student/:studentId')
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  findByStudent(
+    @Param('studentId') studentId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.findByStudent(studentId, req.user);
+  }
+
+  @Get('class/:classId/statistics')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  getClassStatistics(
+    @Param('classId') classId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.getClassStatistics(classId, req.user);
+  }
+
+  // ── Generic :id routes (must come last) ───────────────────────────────────
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.evaluationsService.findOne(+id);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR, UserRole.STUDENT)
+  findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.evaluationsService.findOne(id, req.user);
   }
 
-  @Patch(':id')
+  @Put(':id')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   update(
     @Param('id') id: string,
-    @Body() updateEvaluationDto: UpdateEvaluationDto,
+    @Body() dto: UpdateEvaluationDto,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.evaluationsService.update(+id, updateEvaluationDto);
+    return this.evaluationsService.update(id, dto, req.user);
+  }
+
+  @Put(':id/feedback')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  updateFeedback(
+    @Param('id') id: string,
+    @Body('writtenFeedback') writtenFeedback: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.updateFeedback(
+      id,
+      writtenFeedback,
+      req.user,
+    );
+  }
+
+  @Put(':id/submit')
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  submitEvaluation(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.evaluationsService.submitEvaluation(id, req.user);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.evaluationsService.remove(+id);
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.evaluationsService.remove(id, req.user);
   }
 }
