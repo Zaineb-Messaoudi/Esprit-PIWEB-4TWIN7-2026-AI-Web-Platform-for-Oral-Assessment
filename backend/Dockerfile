@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev
 
 # Copy package files and install all dependencies
 COPY package*.json ./
-RUN npm install --legacy-peer-deps --frozen-lockfile
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -40,7 +40,7 @@ RUN apk add --no-cache \
 
 # Copy only necessary files from builder
 COPY package*.json ./
-RUN npm install --production --legacy-peer-deps --frozen-lockfile
+RUN npm ci --legacy-peer-deps --omit=dev
 
 # Copy built files
 COPY --from=builder /app/dist ./dist

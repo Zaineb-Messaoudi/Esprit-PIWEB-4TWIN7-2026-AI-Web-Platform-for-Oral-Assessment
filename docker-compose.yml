@@ -8,6 +8,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5173:5173"   # Host 5173 → Container 5173 (Nginx)
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
     depends_on:
       - backend
 
@@ -20,6 +24,11 @@ services:
       - "3000:3000" # Host 3000 → Container 3000 (NestJS)
     environment:
       - MONGO_URI=mongodb://root:MyStrongPassword123@mongo:27017/platformdb
+      - NODE_ENV=development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run start:dev
     depends_on:
       - mongo
       - ai
@@ -31,6 +40,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000" # Host 8000 → Container 8000 (FastAPI)
+    volumes:
+      - ./ai:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   # MongoDB database
   mongo:
