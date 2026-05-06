@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  # Frontend React app
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"   # Host 5173 → Container 5173 (Nginx)
+    depends_on:
+      - backend
+
+  # NestJS backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000" # Host 3000 → Container 3000 (NestJS)
+    environment:
+      - MONGO_URI=mongodb://root:MyStrongPassword123@mongo:27017/platformdb
+    depends_on:
+      - mongo
+      - ai
+
+  # FastAPI AI service
+  ai:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000" # Host 8000 → Container 8000 (FastAPI)
+
+  # MongoDB database
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: MyStrongPassword123
+      MONGO_INITDB_DATABASE: platformdb
+    volumes:
+      - mongo-data:/data/db
+
+# Named volume for MongoDB persistence
+volumes:
+  mongo-data:

@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import tempfile
+import subprocess
 
 import cv2
 import numpy as np
@@ -150,6 +151,38 @@ def _process_audio(audio_path: str):
         total_duration,
     )
 
+def iter_video_frames_ffmpeg(video_path: str, fps: int = 1):
+    cmd = [
+        "ffmpeg",
+        "-i", video_path,
+        "-vf", f"fps={fps}",
+        "-f", "image2pipe",
+        "-vcodec", "mjpeg",
+        "-"
+    ]
+
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        bufsize=10**8
+    )
+
+    frame_idx = 0
+
+    while True:
+        raw = process.stdout.read(1024 * 1024)
+        if not raw:
+            break
+
+        img_array = np.frombuffer(raw, dtype=np.uint8)
+        frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+        if frame is None:
+            continue
+
+        yield frame_idx, frame
+        frame_idx += 1
 
 def _analyze_video(video_path: str):
     """
@@ -162,7 +195,7 @@ def _analyze_video(video_path: str):
     sampled_frames:     list[np.ndarray] = []
     last_sample_t = -FRAME_SAMPLE_INTERVAL
 
-    for elapsed, frame_bgr in iter_video_frames(video_path, step_seconds=1.0):
+    for elapsed, frame_bgr in iter_video_frames_ffmpeg(video_path, fps=1):
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
         try:
